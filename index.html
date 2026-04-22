@@ -3,99 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VisãoRemota - Espelhamento ao Vivo</title>
+    <title>ANTIGRAVITY</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
-    <div class="app-container">
-        <header>
-            <div class="logo">
-                <i data-lucide="eye"></i>
-                <h1>VisãoRemota</h1>
-            </div>
-            <p>Espelhamento P2P instantâneo e seguro.</p>
-        </header>
 
-        <main id="main-content">
-            <!-- Home Screen -->
-            <div id="screen-home" class="screen active">
-                <div class="role-selector">
-                    <button class="card-btn" id="btn-transmitter">
-                        <div class="icon-wrapper"><i data-lucide="cast"></i></div>
-                        <h2>Transmissor</h2>
-                        <p>Compartilhar minha câmera ou tela com outro dispositivo</p>
-                    </button>
-                    
-                    <button class="card-btn" id="btn-receiver">
-                        <div class="icon-wrapper"><i data-lucide="monitor-smartphone"></i></div>
-                        <h2>Receptor</h2>
-                        <p>Ver a transmissão de outro dispositivo usando um código</p>
-                    </button>
-                </div>
+    <!-- Main Menu -->
+    <div id="menu" class="screen">
+        <div class="menu-content">
+            <h1 class="title">ANTIGRAVITY</h1>
+            <p class="subtitle">O labirinto escureceu.<br>O caçador virou a presa.</p>
+            <button id="play-btn">[ INICIAR 1 JOGADOR ]</button>
+            <button id="mp-menu-btn" style="margin-top: 15px; border-color: #00FFFF; color: #00FFFF;">[ MULTIPLAYER ]</button>
+            
+            <!-- SUB-MENU MULTIPLAYER -->
+            <div id="mp-submenu" style="display: none; margin-top: 25px; flex-direction: column; gap: 15px; align-items: center;">
+                <button id="mp-create-nav-btn" style="width: 280px; font-size: 1.5rem;">[ CRIAR SALA ]</button>
+                <button id="mp-join-nav-btn" style="width: 280px; font-size: 1.5rem; border-color: #FF4444; color: #FF4444;">[ ENTRAR EM SALA ]</button>
+                <button id="mp-back-btn" style="width: 200px; font-size: 1rem; border-color: #444; color: #888; margin-top: 10px;">[ VOLTAR ]</button>
             </div>
 
-            <!-- Transmitter Setup Screen -->
-            <div id="screen-transmitter-setup" class="screen">
-                <button class="back-btn"><i data-lucide="arrow-left"></i> Voltar</button>
-                <h2>O que deseja compartilhar?</h2>
-                <div class="media-selector">
-                    <button class="media-btn" id="btn-share-camera">
-                        <i data-lucide="camera"></i>
-                        <span>Câmera</span>
-                    </button>
-                    <button class="media-btn" id="btn-share-screen">
-                        <i data-lucide="monitor-up"></i>
-                        <span>Tela</span>
-                    </button>
-                </div>
-                <div id="tx-error" class="error-msg hidden"></div>
+            <!-- CRIAR SALA UI -->
+            <div id="create-room-ui" style="display: none; margin-top: 25px; flex-direction: column; gap: 15px; align-items: center;">
+                <input type="text" id="create-name" placeholder="SEU NOME" maxlength="16" class="mp-input">
+                <input type="password" id="create-pass" placeholder="SENHA DA SALA" maxlength="8" class="mp-input">
+                <button id="confirm-create-btn">[ CONFIRMAR E CRIAR ]</button>
+                <button class="mp-cancel-btn">[ CANCELAR ]</button>
             </div>
 
-            <!-- Transmitter Active Screen -->
-            <div id="screen-transmitter-active" class="screen">
-                <button class="back-btn stop-btn"><i data-lucide="x-circle"></i> Parar Transmissão</button>
-                <div class="room-code-container">
-                    <p>Seu código de acesso:</p>
-                    <h2 id="room-code-display">---</h2>
+            <!-- ENTRAR EM SALA UI -->
+            <div id="join-room-ui" style="display: none; margin-top: 25px; flex-direction: column; gap: 15px; align-items: center;">
+                <div style="color: #666; font-size: 0.8rem; margin-bottom: 5px;">SALAS DISPONÍVEIS:</div>
+                <div id="room-list" style="width: 320px; max-height: 200px; overflow-y: auto; border: 1px solid #333; background: rgba(0,0,0,0.5); padding: 5px;">
+                    <!-- Salas serão inseridas aqui dinamicamente -->
+                    <div style="color: #444; padding: 20px;">Procurando salas...</div>
                 </div>
-                <div class="status-indicator waiting" id="tx-status">Aguardando receptor...</div>
                 
-                <div class="video-container local-video">
-                    <video id="local-video" autoplay muted playsinline></video>
-                    <div class="video-label">Você</div>
+                <div id="join-room-auth" style="display: none; flex-direction: column; gap: 10px; margin-top: 10px; border-top: 1px solid #333; padding-top: 15px; width: 320px;">
+                    <input type="text" id="join-name" placeholder="SEU NOME" maxlength="16" class="mp-input">
+                    <input type="password" id="join-pass" placeholder="SENHA" maxlength="8" class="mp-input">
+                    <button id="confirm-join-btn">[ ENTRAR ]</button>
                 </div>
+                <button class="mp-cancel-btn">[ CANCELAR ]</button>
             </div>
 
-            <!-- Receiver Screen -->
-            <div id="screen-receiver-setup" class="screen">
-                <button class="back-btn"><i data-lucide="arrow-left"></i> Voltar</button>
-                <h2>Conectar à Transmissão</h2>
-                <div class="input-group">
-                    <input type="text" id="input-room-code" placeholder="Digite o código (ex: 12345)" maxlength="5" autocomplete="off">
-                    <button id="btn-connect" class="primary-btn">Conectar <i data-lucide="arrow-right"></i></button>
-                </div>
-                <div id="rx-error" class="error-msg hidden"></div>
+            <!-- SALA DE ESPERA (HOST) -->
+            <div id="lobby-ui" style="display:none; margin-top:20px; padding: 20px; border: 2px solid #00FFFF; background: rgba(0,255,255,0.05); animation: pulse-border 2s infinite;">
+                <div style="color:#00FFFF; font-size: 1rem; letter-spacing: 2px; margin-bottom: 10px;">SALA CRIADA: <span id="lobby-owner-name" style="color:#fff;">---</span></div>
+                <div style="font-size:0.9rem; color:#fff; letter-spacing: 1px; background: #00FFFF; color: #000; padding: 5px; display: inline-block;">AGUARDANDO ADVERSÁRIO...</div>
+                <p style="font-size: 0.8rem; color: #888; margin-top: 15px;">Diga aos seus amigos para procurarem a sua sala na lista.</p>
+                <button class="mp-cancel-btn" style="margin-top: 15px; font-size: 1rem;">[ ABANDONAR ]</button>
             </div>
 
-            <!-- Receiver Active Screen -->
-            <div id="screen-receiver-active" class="screen">
-                <button class="back-btn stop-btn"><i data-lucide="x-circle"></i> Desconectar</button>
-                <div class="status-indicator connecting" id="rx-status">Conectando...</div>
-                
-                <div class="video-container remote-video">
-                    <video id="remote-video" autoplay playsinline></video>
-                    <div class="video-label">Dispositivo Remoto</div>
-                </div>
+            <div id="mp-error" style="color:#ff4444; margin-top:15px; font-size:0.9rem; font-weight: bold; text-shadow: 0 0 5px #000;"></div>
+
+            <div class="lore">
+                <p>O chão afunda sob seus pés trêmulos. O familiar zumbido neon foi substituído pelo gotejar doentio e pelo estalo mastigatório de dentes afiados.</p>
+                <p>Você não está comendo. Você é a comida.</p>
+                <p>W A S D para se mover. O Assassino "rosna" com a barra de ESPAÇO.</p>
             </div>
-        </main>
+        </div>
+        <!-- Efeitos visuais no fundo do menu -->
+        <div class="menu-static"></div>
     </div>
 
-    <script src="app.js"></script>
-    <script>
-        lucide.createIcons();
-    </script>
+    <!-- Interface In-Game / Overlays -->
+    <div id="score-wrap" style="display:none;">
+        MEMÓRIAS: <span id="dots-left">---</span> | PONTOS: <span id="score">0</span>
+    </div>
+
+    <div id="overlay" class="screen" style="display:none;">
+        <div class="overlay-content">
+            <h2 id="msg-title"></h2>
+            <p id="msg-sub"></p>
+        </div>
+    </div>
+
+    <!-- Jogo -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Post process scanlines overlay for pure horror aesthetic -->
+    <div id="scanlines"></div>
+
+    <!-- Pause Button -->
+    <button id="pause-btn" style="display:none;">PAUSE</button>
+
+    <!-- Pause Menu Overlay -->
+    <div id="pause-menu" class="screen" style="display:none;">
+        <div class="overlay-content">
+            <h2 class="title">PAUSADO</h2>
+            <button id="resume-btn">[ CONTINUAR ]</button>
+            <button id="restart-btn" style="margin-top: 20px; font-size: 1.2rem; border-color: #444; color: #888;">[ REINICIAR ]</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script src="js/socket.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/entity.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>
