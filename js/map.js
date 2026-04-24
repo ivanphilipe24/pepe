@@ -9,47 +9,215 @@
  */
 
 const GameMap = (() => {
-  const COLS = 28;
-  const ROWS = 31;
+  let COLS = 28;
+  let ROWS = 31;
   const TILE = 24;
 
   // Tile constants
   const W = 0, D = 1, E = 2, P = 3, G = 4, DR = 5, T = 7, O = 8;
 
   // Classic Pac-Man maze (28 × 31)
-  const BASE = [
-    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
-    [W,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,W],
-    [W,D,W,W,W,W,D,W,W,W,W,W,D,W,W,D,W,W,W,W,W,D,W,W,W,W,D,W],
-    [W,P,W,W,W,W,D,W,W,W,W,W,D,W,W,D,W,W,W,W,W,D,W,W,W,W,P,W],
-    [W,D,W,W,W,W,D,W,W,W,W,W,D,W,W,D,W,W,W,W,W,D,W,W,W,W,D,W],
-    [W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
-    [W,D,W,W,W,W,D,W,W,D,W,W,W,W,W,W,W,W,D,W,W,D,W,W,W,W,D,W],
-    [W,D,D,D,D,D,D,W,W,D,D,D,D,W,W,D,D,D,D,W,W,D,D,D,D,D,D,W],
-    [W,W,W,W,W,W,D,W,W,W,W,W,E,W,W,E,W,W,W,W,W,D,W,W,W,W,W,W],
-    [O,O,O,O,O,W,D,W,W,W,W,W,E,W,W,E,W,W,W,W,W,D,W,O,O,O,O,O],
-    [O,O,O,O,O,W,D,W,W,E,E,E,E,E,E,E,E,E,E,W,W,D,W,O,O,O,O,O],
-    [O,O,O,O,O,W,D,W,W,E,W,W,W,DR,DR,W,W,W,E,W,W,D,W,O,O,O,O,O],
-    [W,W,W,W,W,W,D,W,W,E,W,G,G,G,G,G,G,W,E,W,W,D,W,W,W,W,W,W],
-    [T,E,E,E,E,E,D,E,E,E,W,G,G,G,G,G,G,W,E,E,E,D,E,E,E,E,E,T],
-    [W,W,W,W,W,W,D,W,W,E,W,G,G,G,G,G,G,W,E,W,W,D,W,W,W,W,W,W],
-    [O,O,O,O,O,W,D,W,W,E,W,W,W,W,W,W,W,W,E,W,W,D,W,O,O,O,O,O],
-    [O,O,O,O,O,W,D,W,W,E,E,E,E,E,E,E,E,E,E,W,W,D,W,O,O,O,O,O],
-    [O,O,O,O,O,W,D,W,W,E,W,W,W,W,W,W,W,W,E,W,W,D,W,O,O,O,O,O],
-    [W,W,W,W,W,W,D,W,W,E,W,W,W,W,W,W,W,W,E,W,W,D,W,W,W,W,W,W],
-    [W,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,W],
-    [W,D,W,W,W,W,D,W,W,W,W,W,D,W,W,D,W,W,W,W,W,D,W,W,W,W,D,W],
-    [W,P,D,D,W,W,D,D,D,D,D,D,D,E,E,D,D,D,D,D,D,D,W,W,D,D,P,W],
-    [W,W,W,D,W,W,D,W,W,D,W,W,W,W,W,W,W,W,D,W,W,D,W,W,D,W,W,W],
-    [W,D,D,D,D,D,D,W,W,D,D,D,D,W,W,D,D,D,D,W,W,D,D,D,D,D,D,W],
-    [W,D,W,W,W,W,W,W,W,W,W,W,D,W,W,D,W,W,W,W,W,W,W,W,W,W,D,W],
-    [W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
-    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
-    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
-    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
-    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
-    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+  
+  
+  
+  // MAP_1: O clássico 28x31
+  const MAP_1 = [
+      [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+      [W,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,W],
+      [W,D,W,W,W,W,D,W,W,W,W,W,D,W,W,D,W,W,W,W,W,D,W,W,W,W,D,W],
+      [W,P,W,W,W,W,D,W,W,W,W,W,D,W,W,D,W,W,W,W,W,D,W,W,W,W,P,W],
+      [W,D,W,W,W,W,D,W,W,W,W,W,D,W,W,D,W,W,W,W,W,D,W,W,W,W,D,W],
+      [W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
+      [W,D,W,W,W,W,D,W,W,D,W,W,W,W,W,W,W,W,D,W,W,D,W,W,W,W,D,W],
+      [W,D,D,D,D,D,D,W,W,D,D,D,D,W,W,D,D,D,D,W,W,D,D,D,D,D,D,W],
+      [W,W,W,W,W,W,D,W,W,W,W,W,E,W,W,E,W,W,W,W,W,D,W,W,W,W,W,W],
+      [O,O,O,O,O,W,D,W,W,W,W,W,E,W,W,E,W,W,W,W,W,D,W,O,O,O,O,O],
+      [O,O,O,O,O,W,D,W,W,E,E,E,E,E,E,E,E,E,E,W,W,D,W,O,O,O,O,O],
+      [O,O,O,O,O,W,D,W,W,E,W,W,W,DR,DR,W,W,W,E,W,W,D,W,O,O,O,O,O],
+      [W,W,W,W,W,W,D,W,W,E,W,G,G,G,G,G,G,W,E,W,W,D,W,W,W,W,W,W],
+      [T,E,E,E,E,E,D,E,E,E,W,G,G,G,G,G,G,W,E,E,E,D,E,E,E,E,E,T],
+      [W,W,W,W,W,W,D,W,W,E,W,G,G,G,G,G,G,W,E,W,W,D,W,W,W,W,W,W],
+      [O,O,O,O,O,W,D,W,W,E,W,W,W,W,W,W,W,W,E,W,W,D,W,O,O,O,O,O],
+      [O,O,O,O,O,W,D,W,W,E,E,E,E,E,E,E,E,E,E,W,W,D,W,O,O,O,O,O],
+      [O,O,O,O,O,W,D,W,W,E,W,W,W,W,W,W,W,W,E,W,W,D,W,O,O,O,O,O],
+      [W,W,W,W,W,W,D,W,W,E,W,W,W,W,W,W,W,W,E,W,W,D,W,W,W,W,W,W],
+      [W,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,W],
+      [W,D,W,W,W,W,D,W,W,W,W,W,D,W,W,D,W,W,W,W,W,D,W,W,W,W,D,W],
+      [W,P,D,D,W,W,D,D,D,D,D,D,D,E,E,D,D,D,D,D,D,D,W,W,D,D,P,W],
+      [W,W,W,D,W,W,D,W,W,D,W,W,W,W,W,W,W,W,D,W,W,D,W,W,D,W,W,W],
+      [W,D,D,D,D,D,D,W,W,D,D,D,D,W,W,D,D,D,D,W,W,D,D,D,D,D,D,W],
+      [W,D,W,W,W,W,W,W,W,W,W,W,D,W,W,D,W,W,W,W,W,W,W,W,W,W,D,W],
+      [W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
+      [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+      [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+      [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+      [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+      [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
   ];
+  
+  // MAP_2: Narrow/Vertical 17x25
+  const MAP_2 = [
+    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,D,D,D,D,D,W,W,D,D,D,D,D,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,D,W,W,W,D,W,W,D,W,W,W,D,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,P,W,W,W,D,W,W,D,W,W,W,P,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,D,D,D,D,D,D,D,D,D,D,D,D,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,D,W,W,D,W,W,W,W,W,D,W,D,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,D,D,D,D,D,W,W,D,D,D,D,D,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,W,D,D,W,W,D,D,W,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,W,D,E,W,W,E,D,W,W,W,W,W,W,W,W,W,W,W],
+    [O,O,O,O,O,O,O,O,O,O,W,D,E,W,W,E,D,W,O,O,O,O,O,O,O,O,O,O],
+    [O,O,O,O,O,O,O,O,O,O,W,D,E,E,E,E,D,W,O,O,O,O,O,O,O,O,O,O],
+    [O,O,O,O,O,O,O,O,O,O,W,D,W,DR,DR,W,D,W,O,O,O,O,O,O,O,O,O,O],
+    [W,W,W,W,W,W,W,W,W,W,W,D,W,G,G,W,D,W,W,W,W,W,W,W,W,W,W,W],
+    [T,E,E,E,E,E,E,E,E,E,D,E,W,G,G,W,E,D,E,E,E,E,E,E,E,E,E,T],
+    [W,W,W,W,W,W,W,W,W,W,W,D,W,G,G,W,D,W,W,W,W,W,W,W,W,W,W,W],
+    [O,O,O,O,O,O,O,O,O,O,W,D,W,W,W,W,D,W,O,O,O,O,O,O,O,O,O,O],
+    [O,O,O,O,O,O,O,O,O,O,W,D,E,E,E,E,D,W,O,O,O,O,O,O,O,O,O,O],
+    [O,O,O,O,O,O,O,O,O,O,W,D,W,W,W,W,D,W,O,O,O,O,O,O,O,O,O,O],
+    [W,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,D,D,D,D,D,W,W,D,D,D,D,D,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,D,W,W,W,D,W,W,D,W,W,W,D,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,P,D,D,W,D,E,E,D,W,D,D,P,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,D,W,D,W,W,D,W,D,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,D,D,D,D,D,W,W,D,D,D,D,D,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,D,D,D,D,D,D,D,D,D,D,D,D,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+];
+  
+  // MAP_3: Corredores cegos 15x29 (Even more vertical)
+  const MAP_3 = [
+    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,D,D,D,W,W,D,D,D,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,D,W,D,W,W,D,W,D,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,D,W,D,D,D,D,W,D,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,P,W,W,W,W,W,W,P,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,D,D,D,D,D,D,D,D,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,D,W,W,D,W,W,D,W,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,D,W,W,D,W,W,D,W,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,D,W,D,D,D,D,D,W,W,W,W,W,W,W,W,W,W,W],
+    [O,O,O,O,O,O,O,O,O,O,D,W,E,W,W,E,W,D,O,O,O,O,O,O,O,O,O,O],
+    [W,W,W,W,W,W,W,W,W,W,D,E,E,DR,DR,E,E,D,W,W,W,W,W,W,W,W,W],
+    [T,E,E,E,E,E,E,E,E,E,D,E,W,G,G,W,E,D,E,E,E,E,E,E,E,E,E,T],
+    [W,W,W,W,W,W,W,W,W,W,D,E,W,G,G,W,E,D,W,W,W,W,W,W,W,W,W,W],
+    [O,O,O,O,O,O,O,O,O,O,D,W,W,W,W,W,W,D,O,O,O,O,O,O,O,O,O,O],
+    [O,O,O,O,O,O,O,O,O,O,D,D,D,D,D,D,D,D,O,O,O,O,O,O,O,O,O,O],
+    [W,W,W,W,W,W,W,W,W,W,D,W,W,W,W,W,W,D,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,D,D,D,D,D,D,D,D,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,D,W,W,W,D,W,W,D,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,P,D,D,D,D,D,D,P,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,W,D,W,W,D,W,D,W,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,D,D,D,D,D,D,D,D,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,W,W,D,W,W,D,W,W,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,W,W,D,W,W,D,W,W,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,W,W,D,W,W,D,W,W,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,W,W,D,D,D,D,W,W,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+];
+  
+  // MAP_4: A Fome 28x25
+  const MAP_4 = [
+      [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+      [W,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,W],
+      [W,D,W,W,W,D,W,W,W,W,W,W,D,W,W,D,W,W,W,W,W,W,D,W,W,W,D,W],
+      [W,P,W,W,W,D,W,W,W,W,W,W,D,D,D,D,W,W,W,W,W,W,D,W,W,W,P,W],
+      [W,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,W],
+      [W,D,W,W,W,D,W,W,D,W,W,W,W,W,W,W,W,W,W,D,W,W,D,W,W,W,D,W],
+      [W,D,W,W,W,D,W,W,D,D,D,D,D,W,W,D,D,D,D,D,W,W,D,W,W,W,D,W],
+      [W,D,D,D,D,D,W,W,W,W,W,W,D,W,W,D,W,W,W,W,W,W,D,D,D,D,D,W],
+      [W,W,W,W,W,D,W,W,W,W,W,W,D,W,W,D,W,W,W,W,W,W,D,W,W,W,W,W],
+      [O,O,O,O,W,D,D,D,D,D,D,D,D,E,E,D,D,D,D,D,D,D,D,W,O,O,O,O],
+      [O,O,O,O,W,D,W,W,W,W,E,W,W,DR,DR,W,W,E,W,W,W,W,D,W,O,O,O,O],
+      [W,W,W,W,W,D,W,W,W,W,E,W,G,G,G,G,W,E,W,W,W,W,D,W,W,W,W,W],
+      [T,E,E,E,E,D,E,E,E,E,E,W,G,G,G,G,W,E,E,E,E,E,D,E,E,E,E,T],
+      [W,W,W,W,W,D,W,W,W,W,E,W,W,W,W,W,W,E,W,W,W,W,D,W,W,W,W,W],
+      [O,O,O,O,W,D,W,W,W,W,E,E,E,E,E,E,E,E,W,W,W,W,D,W,O,O,O,O],
+      [O,O,O,O,W,D,W,W,W,W,D,W,W,W,W,W,W,D,W,W,W,W,D,W,O,O,O,O],
+      [W,W,W,W,W,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,W,W,W,W,W],
+      [W,D,D,D,D,D,W,W,W,W,W,W,D,W,W,D,W,W,W,W,W,W,D,D,D,D,D,W],
+      [W,D,W,W,W,D,W,W,W,W,W,W,D,W,W,D,W,W,W,W,W,W,D,W,W,W,D,W],
+      [W,P,D,D,W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W,D,D,P,W],
+      [W,W,W,D,W,D,W,W,W,W,D,W,W,W,W,W,W,D,W,W,W,W,D,W,D,W,W,W],
+      [W,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,W],
+      [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+      [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+      [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W]
+  ];
+  
+  // MAP_5: Open Blood Maze 28x28 (Névoa de guerra atua aqui)
+  const MAP_5 = [
+      [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+      [W,P,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,P,W],
+      [W,D,E,E,E,E,E,E,E,E,E,E,D,W,W,D,E,E,E,E,E,E,E,E,E,E,D,W],
+      [W,D,E,W,W,W,E,W,W,W,W,E,D,W,W,D,E,W,W,W,W,E,W,W,W,E,D,W],
+      [W,D,E,W,W,W,E,W,W,W,W,E,D,D,D,D,E,W,W,W,W,E,W,W,W,E,D,W],
+      [W,D,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,D,W],
+      [W,D,E,W,W,W,E,W,W,E,W,W,W,W,W,W,W,W,E,W,W,E,W,W,W,E,D,W],
+      [W,D,E,E,E,E,E,W,W,E,E,E,E,W,W,E,E,E,E,W,W,E,E,E,E,E,D,W],
+      [W,W,W,W,W,W,D,W,W,W,W,W,E,W,W,E,W,W,W,W,W,D,W,W,W,W,W,W],
+      [O,O,O,O,O,W,D,W,W,E,E,E,E,E,E,E,E,E,E,W,W,D,W,O,O,O,O,O],
+      [W,W,W,W,W,W,D,W,W,E,W,W,DR,DR,W,W,E,W,W,D,W,W,W,W,W,W],
+      [T,E,E,E,E,E,D,E,E,E,W,G,G,G,G,W,E,E,E,D,E,E,E,E,E,T],
+      [W,W,W,W,W,W,D,W,W,E,W,G,G,G,G,W,E,W,W,D,W,W,W,W,W,W],
+      [O,O,O,O,O,W,D,W,W,E,W,W,W,W,W,W,E,W,W,D,W,O,O,O,O,O],
+      [O,O,O,O,O,W,D,W,W,E,E,E,E,E,E,E,E,W,W,D,W,O,O,O,O,O],
+      [W,W,W,W,W,W,D,W,W,E,W,W,W,W,W,W,E,W,W,D,W,W,W,W,W,W],
+      [W,D,D,D,D,D,D,E,E,E,E,E,E,W,W,E,E,E,E,E,E,D,D,D,D,D,W],
+      [W,D,W,W,W,W,D,W,W,W,W,W,E,W,W,E,W,W,W,W,W,D,W,W,W,W,D,W],
+      [W,P,D,D,W,W,D,E,E,E,E,E,E,E,E,E,E,E,E,E,E,D,W,W,D,D,P,W],
+      [W,W,W,D,W,W,D,E,W,W,W,W,W,W,W,W,W,W,W,W,E,D,W,W,D,W,W,W],
+      [W,D,D,D,D,D,D,E,W,W,W,W,W,W,W,W,W,W,W,W,E,D,D,D,D,D,W],
+      [W,D,E,E,E,E,E,E,E,E,E,E,E,W,W,E,E,E,E,E,E,E,E,E,E,E,D,W],
+      [W,D,E,W,W,W,W,W,W,W,W,W,E,W,W,E,W,W,W,W,W,W,W,W,W,E,D,W],
+      [W,D,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,D,W],
+      [W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
+      [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+      [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W]
+  ];
+  
+  // MAP_6: Antigravity 28x28 (Vast emptiness)
+  const MAP_6 = [
+      [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+      [W,P,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,P,W],
+      [W,E,W,E,E,E,W,E,E,E,E,E,W,W,W,W,E,E,E,E,E,W,E,E,E,W,E,W],
+      [W,E,W,E,E,E,W,E,E,E,E,E,W,W,W,W,E,E,E,E,E,W,E,E,E,W,E,W],
+      [W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
+      [W,E,E,E,E,E,E,E,W,W,E,E,E,E,E,E,E,E,W,W,E,E,E,E,E,E,E,W],
+      [W,E,E,W,W,W,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,W,W,W,E,E,W],
+      [W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W],
+      [W,W,W,W,W,W,E,E,E,E,E,E,W,W,W,W,E,E,E,E,E,E,W,W,W,W,W,W],
+      [O,O,O,O,O,W,E,E,E,E,E,E,W,W,W,W,E,E,E,E,E,E,W,O,O,O,O,O],
+      [W,W,W,W,W,W,E,E,E,E,W,W,DR,DR,W,W,E,E,E,E,E,W,W,W,W,W,W],
+      [T,E,E,E,E,E,D,D,D,E,W,G,G,G,G,W,E,D,D,D,E,E,E,E,E,T],
+      [W,W,W,W,W,W,E,E,E,E,W,W,W,W,W,W,E,E,E,E,E,W,W,W,W,W,W],
+      [O,O,O,O,O,W,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,W,O,O,O,O,O],
+      [O,O,O,O,O,W,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,W,O,O,O,O,O],
+      [W,W,W,W,W,W,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,W,W,W,W,W,W],
+      [W,E,E,E,E,E,E,E,E,E,E,E,W,W,W,W,E,E,E,E,E,E,E,E,E,E,E,W],
+      [W,E,W,W,E,E,W,W,W,E,E,E,W,W,W,W,E,E,E,W,W,W,E,E,W,W,E,W],
+      [W,P,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,P,W],
+      [W,E,W,W,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,W,W,E,W],
+      [W,E,E,E,E,E,E,W,W,W,E,E,E,E,E,E,E,E,W,W,W,E,E,E,E,E,E,W],
+      [W,D,D,D,D,D,D,D,D,D,D,D,D,W,W,D,D,D,D,D,D,D,D,D,D,D,D,W],
+      [W,E,E,W,W,W,E,E,E,E,E,E,E,W,W,E,E,E,E,E,E,E,W,W,W,E,E,W],
+      [W,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,E,W],
+      [W,P,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,D,P,W],
+      [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
+      [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W]
+  ];
+  
+  const MAP_DATA = [MAP_1, MAP_2, MAP_3, MAP_4, MAP_5, MAP_6];
+
 
   let map;          // mutable copy per game
   let totalDots;
@@ -58,8 +226,12 @@ const GameMap = (() => {
   /* ── helpers ────────────────────────────────────── */
   function isPath(v){ return v===D||v===E||v===P||v===G||v===DR||v===T; }
 
-  function init(){
-    map = BASE.map(r => [...r]);
+  function init(level = 0){
+    const safeLevel = Math.min(level, MAP_DATA.length - 1);
+    const baseMap = MAP_DATA[safeLevel];
+    ROWS = baseMap.length;
+    COLS = baseMap[0].length;
+    map = baseMap.map(r => [...r]);
     totalDots = 0;
     for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
       if(map[r][c]===D||map[r][c]===P) totalDots++;
@@ -141,7 +313,9 @@ const GameMap = (() => {
   }
 
   return {
-    COLS,ROWS,TILE,W,D,E,P,G,DR,T,O,
+    get COLS() { return COLS; },
+    get ROWS() { return ROWS; },
+    TILE,W,D,E,P,G,DR,T,O,
     init,tile,walkable,collectDot,wrapTunnel,findPath,
     isPath,randomOpenTile,forceCollectDot,
     getMap:()=>map,

@@ -16,8 +16,22 @@ const Player = (() => {
   const keys = { w:false, a:false, s:false, d:false };
 
   function init(){
-    // Spawn in ghost house
-    row=14; col=14; x=col*GameMap.TILE+GameMap.TILE/2; y=row*GameMap.TILE+GameMap.TILE/2;
+    // Encontrar um ponto de spawn válido próximo ao centro
+    let sr = 14, sc = 14;
+    if(!GameMap.walkable(sr, sc, true)) {
+        outer: for(let dist=1; dist<15; dist++) {
+            for(let r=sr-dist; r<=sr+dist; r++) {
+                for(let c=sc-dist; c<=sc+dist; c++) {
+                    if(GameMap.walkable(r, c, true)) {
+                        sr = r; sc = c;
+                        break outer;
+                    }
+                }
+            }
+        }
+    }
+    
+    row=sr; col=sc; x=col*GameMap.TILE+GameMap.TILE/2; y=row*GameMap.TILE+GameMap.TILE/2;
     targetRow=row; targetCol=col;
     moving=false;
     dir={name:'',dr:0,dc:0}; nextDir={name:'',dr:0,dc:0};
@@ -74,7 +88,7 @@ const Player = (() => {
       const ty = targetRow*GameMap.TILE+GameMap.TILE/2;
       const dx=tx-x, dy=ty-y;
       const dist = Math.sqrt(dx*dx+dy*dy);
-      const step = SPEED * GameMap.TILE * dt;
+      const step = SPEED * GameMap.TILE * dt * (window.AdminState ? window.AdminState.speedMult : 1.0);
 
       if(dist <= step){
         // Arrived at tile
@@ -119,5 +133,10 @@ const Player = (() => {
     if(fflicker !== undefined) flashlightFlicker = fflicker;
   }
 
-  return { init, update, getPos:()=>({row,col,x,y}), getDir:()=>dir, getFlicker:()=>flashlightFlicker, getAngle:()=>flashlightAngle, setDirection, forcePos };
+  function syncPixels() {
+    x = col * GameMap.TILE + GameMap.TILE / 2;
+    y = row * GameMap.TILE + GameMap.TILE / 2;
+  }
+
+  return { init, update, getPos:()=>({row,col,x,y}), getDir:()=>dir, getFlicker:()=>flashlightFlicker, getAngle:()=>flashlightAngle, setDirection, forcePos, syncPixels };
 })();

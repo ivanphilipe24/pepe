@@ -14,6 +14,13 @@ const Game = (() => {
   let powerTimer = null; // Para modo Single Player
   let score = 0; // Pontuação global
   
+  let adminClicks = 0;
+  window.AdminState = {
+      godMode: false,
+      revealMap: false,
+      speedMult: 1.0
+  };
+  
   const LEVEL_NAMES = [
     "Nível 1: O Eco",
     "Nível 2: O Matadouro",
@@ -37,6 +44,7 @@ const Game = (() => {
     scoreEl = document.getElementById('score');
     dotsEl = document.getElementById('dots-left');
 
+    GameMap.init(0);
     Renderer.init();
     Audio.init();
     Player.init(); // just bindings
@@ -76,6 +84,23 @@ const Game = (() => {
     });
 
     setupSwipeControls();
+
+    uiTitle = document.querySelector('.title');
+    uiTitle.addEventListener('click', () => {
+        adminClicks++;
+        if(adminClicks >= 5) {
+            adminClicks = 0;
+            toggleAdminPanel();
+        }
+    });
+
+    window.addEventListener('keydown', (e) => {
+        if(e.key.toLowerCase() === 'e') {
+            toggleAdminPanel();
+        }
+    });
+
+    document.getElementById('admin-close-btn').addEventListener('click', toggleAdminPanel);
 
     requestAnimationFrame(menuLoop);
   }
@@ -154,6 +179,9 @@ const Game = (() => {
     state = 'STARTING';
     uiMenu.style.display = 'none';
     uiOverlay.style.display = 'flex';
+    if(navigator.vibrate) navigator.vibrate(200);
+    const phaseEl = document.getElementById('phase');
+    if(phaseEl) phaseEl.textContent = level + 1;
     uiMessage.textContent = LEVEL_NAMES[level];
     
     if(level === 2) uiSubmsg.textContent = "[ A lanterna falha... ]";
@@ -161,7 +189,7 @@ const Game = (() => {
     else if(level === 5) uiSubmsg.textContent = "[ Realidade distorcida. ]";
     else uiSubmsg.textContent = "";
 
-    GameMap.init(); // resets dots
+    GameMap.init(level); // resets dots
     Renderer.preRenderMaze(level);
     Player.init();
     Entity.init(level);
@@ -199,7 +227,7 @@ const Game = (() => {
     uiMessage.style.color = role === 'KILLER' ? "#FF0000" : "#00FFFF";
     uiSubmsg.textContent = role === 'KILLER' ? "Encontre e devore o fantasma guiando-se pela sua luz." : "Recolha todas as memórias. Cuidado com o predador.";
     
-    GameMap.init();
+    GameMap.init(level);
     Renderer.preRenderMaze(level);
     Player.init();
     Entity.init(level);
@@ -245,6 +273,13 @@ const Game = (() => {
            if(flipped) document.body.classList.remove('flipped');
            else document.body.classList.add('flipped');
        }
+       if(Math.random()<0.02){
+           const cvs = document.getElementById('game-canvas');
+           cvs.style.filter = "invert(1) hue-rotate(90deg)";
+           setTimeout(() => {
+               if(state === 'PLAY') cvs.style.filter = window.isPowerModeActive ? "hue-rotate(180deg) brightness(1.2)" : "none";
+           }, 50);
+       }
     }
 
     if(!isMultiplayer) {
@@ -254,7 +289,7 @@ const Game = (() => {
            if(scoreEl) scoreEl.textContent = score;
            dotsEl.textContent = GameMap.dotsLeft();
            if(pts === 5) {
-               activatePowerMode(10000);
+               activatePowerMode(Math.max(2000, 10000 - level * 1000));
            }
            if(GameMap.dotsLeft() <= 0){
                winLevel();
@@ -273,7 +308,7 @@ const Game = (() => {
                 dotsEl.textContent = GameMap.dotsLeft();
                 Net.emitDotCollected(Player.getPos().row, Player.getPos().col);
                 if(pts === 5) {
-                    activatePowerMode(10000); // Ativação imediata local
+                    activatePowerMode(Math.max(2000, 10000 - level * 1000)); // Ativação imediata local
                 }
                 if(GameMap.dotsLeft() <= 0){
                     Net.emitAllDotsCollected();
@@ -375,6 +410,7 @@ const Game = (() => {
   }
 
   function die(){
+    if(window.AdminState.godMode) return;
     state = 'GAMEOVER';
     cancelAnimationFrame(animId);
     Audio.playDeath();
@@ -401,24 +437,26 @@ const Game = (() => {
   function winLevel(){
     state = 'LEVEL_TRANSITION';
     cancelAnimationFrame(animId);
-    Audio.playVictory();
     Audio.stopSteps();
+    if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
     
     uiOverlay.style.display = 'flex';
-    uiMessage.textContent = "MEMÓRIAS RESTAURADAS";
-    uiMessage.style.color = "#00FFFF";
+    uiMessage.textContent = "SISTEMA CORROMPIDO... PRÓXIMO NÍVEL";
+    uiMessage.style.color = "#FF00FF";
+    uiMessage.style.textShadow = "2px 0 red, -2px 0 blue";
     uiSubmsg.textContent = "";
     document.body.className = '';
     
     setTimeout(() => {
       level++;
       uiMessage.style.color = "#FFFFFF";
+      uiMessage.style.textShadow = "none";
       if(level < LEVEL_NAMES.length){
          startLevel();
       } else {
          gameComplete();
       }
-    }, 4000);
+    }, 2000);
   }
 
   function gameComplete(){
@@ -517,7 +555,42 @@ const Game = (() => {
       }
   }
 
-  return { init, startMultiplayer, triggerGrowlEffect, networkGameOver, networkDisconnect, setPowerMode, activatePowerMode, handleKillerEaten };
+  function toggleAdminPanel() {
+      const panel = document.getElementById('admin-panel');
+      if(panel.style.display === 'none') {
+          panel.style.display = 'flex';
+          Audio.click();
+      } else {
+          panel.style.display = 'none';
+      }
+  }
+
+  function adminJump(targetLevel) {
+      level = targetLevel;
+      startLevel();
+      toggleAdminPanel();
+  }
+
+  function adminToggle(feature) {
+      if(feature === 'god') {
+          AdminState.godMode = !AdminState.godMode;
+          document.getElementById('admin-god-btn').textContent = AdminState.godMode ? 'ON' : 'OFF';
+          document.getElementById('admin-god-btn').classList.toggle('active', AdminState.godMode);
+      }
+      if(feature === 'reveal') {
+          AdminState.revealMap = !AdminState.revealMap;
+          document.getElementById('admin-reveal-btn').textContent = AdminState.revealMap ? 'ON' : 'OFF';
+          document.getElementById('admin-reveal-btn').classList.toggle('active', AdminState.revealMap);
+      }
+      if(feature === 'speed') {
+          AdminState.speedMult = AdminState.speedMult === 1.0 ? 2.5 : 1.0;
+          document.getElementById('admin-speed-btn').textContent = AdminState.speedMult > 1.0 ? 'ON' : 'OFF';
+          document.getElementById('admin-speed-btn').classList.toggle('active', AdminState.speedMult > 1.0);
+      }
+      Audio.click();
+  }
+
+  return { init, startMultiplayer, triggerGrowlEffect, networkGameOver, networkDisconnect, setPowerMode, activatePowerMode, handleKillerEaten, adminJump, adminToggle };
 })();
 
 window.onload = Game.init;

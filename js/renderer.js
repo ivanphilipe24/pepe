@@ -7,6 +7,8 @@ const Renderer = (() => {
   let canvas, ctx;
   let bgCanvas, bgCtx; // Pre-render static maze parts to optimize
   let TILE = 24;
+  let isMobileDevice = false;
+  let currentLevel = 0;
 
   const COLORS = {
     wallLevel:   ['#0000AA', '#550000', '#222222', '#660000', '#880000', '#AA0000'],
@@ -24,6 +26,8 @@ const Renderer = (() => {
     bgCanvas = document.createElement('canvas');
     bgCtx = bgCanvas.getContext('2d');
     
+    isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 800;
+
     window.addEventListener('resize', resize);
     resize();
   }
@@ -31,12 +35,31 @@ const Renderer = (() => {
   function resize(){
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+    isMobileDevice = window.innerWidth < 800; 
+    
+    // Re-calculate tile and pre-render if we are already in a level
+    if (GameMap.getMap()) {
+      preRenderMaze(currentLevel);
+    }
   }
 
   function preRenderMaze(level){
+    currentLevel = level;
     const cols = GameMap.COLS, rows = GameMap.ROWS;
-    TILE = Math.floor(Math.min(canvas.width / cols, canvas.height / rows));
+    const baseTile = Math.floor(Math.min(canvas.width / cols, canvas.height / rows));
+    
+    // Zoom factor for mobile
+    if (isMobileDevice) {
+      TILE = Math.floor(baseTile * 2.2); 
+    } else {
+      TILE = baseTile;
+    }
+    
     GameMap.TILE = TILE; // Sync tile size
+    
+    // Sync pixel positions for player and entity if they exist
+    if (typeof Player !== 'undefined' && Player.syncPixels) Player.syncPixels();
+    if (typeof Entity !== 'undefined' && Entity.syncPixels) Entity.syncPixels();
     
     // Resize bg canvas based on tile logic
     bgCanvas.width = cols * TILE;
@@ -186,8 +209,22 @@ const Renderer = (() => {
   // Rewrite render flow for proper clipping
   function renderAll(dt, player, entity, levelMap, level, proximity, myRole, isPowerModeActive){
     const gW = GameMap.COLS * TILE, gH = GameMap.ROWS * TILE;
-    const offsetX = Math.floor((canvas.width - gW)/2);
-    const offsetY = Math.floor((canvas.height - gH)/2);
+    
+    let offsetX, offsetY;
+    
+    if (isMobileDevice) {
+      // Follow camera logic for mobile
+      const pPos = player.getPos();
+      offsetX = Math.floor(canvas.width / 2 - pPos.x);
+      offsetY = Math.floor(canvas.height / 2 - pPos.y);
+      
+      // Optional: Clamp offsets so we don't show too much void (if desired)
+      // For now, let's keep it simple as darkness covers the void anyway
+    } else {
+      // Classic center maze for desktop
+      offsetX = Math.floor((canvas.width - gW)/2);
+      offsetY = Math.floor((canvas.height - gH)/2);
+    }
 
     ctx.fillStyle = '#050510'; // Deep void
     ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -416,6 +453,7 @@ const Renderer = (() => {
   }
 
   function _drawDarkness(offsetX, offsetY){
+    if(window.AdminState && window.AdminState.revealMap) return;
     const pPos = Player.getPos();
     let px = pPos.x + offsetX, py = pPos.y + offsetY;
     const pDir = Player.getDir();

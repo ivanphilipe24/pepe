@@ -69,7 +69,7 @@
 
     <!-- Interface In-Game / Overlays -->
     <div id="score-wrap" style="display:none;">
-        MEMÓRIAS: <span id="dots-left">---</span> | PONTOS: <span id="score">0</span>
+        FASE: <span id="phase">1</span>/6 | MEMÓRIAS: <span id="dots-left">---</span> | PONTOS: <span id="score">0</span>
     </div>
 
     <div id="overlay" class="screen" style="display:none;">
@@ -94,6 +94,39 @@
             <h2 class="title">PAUSADO</h2>
             <button id="resume-btn">[ CONTINUAR ]</button>
             <button id="restart-btn" style="margin-top: 20px; font-size: 1.2rem; border-color: #444; color: #888;">[ REINICIAR ]</button>
+        </div>
+    </div>
+
+    <!-- Admin Panel Overlay -->
+    <div id="admin-panel" class="screen" style="display:none; border: 2px solid #00FF00; background: rgba(0,20,0,0.95); z-index: 1000;">
+        <div class="overlay-content" style="color: #00FF00;">
+            <h2 style="color: #00FF00; font-family: 'Share Tech Mono', monospace; font-size: 3rem;">ADMIN PANEL</h2>
+            <div style="margin: 20px 0; display: flex; flex-direction: column; gap: 15px; font-family: 'Share Tech Mono', monospace;">
+                <div>
+                    <p style="margin-bottom: 10px; color: #00FF00;">PULAR PARA FASE:</p>
+                    <div style="display: flex; gap: 5px; justify-content: center;">
+                        <button class="admin-btn" onclick="Game.adminJump(0)">1</button>
+                        <button class="admin-btn" onclick="Game.adminJump(1)">2</button>
+                        <button class="admin-btn" onclick="Game.adminJump(2)">3</button>
+                        <button class="admin-btn" onclick="Game.adminJump(3)">4</button>
+                        <button class="admin-btn" onclick="Game.adminJump(4)">5</button>
+                        <button class="admin-btn" onclick="Game.adminJump(5)">6</button>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 320px; margin: 0 auto;">
+                    <span>INVENCIBILIDADE:</span>
+                    <button id="admin-god-btn" class="admin-btn" onclick="Game.adminToggle('god')">OFF</button>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 320px; margin: 0 auto;">
+                    <span>REVELAR MAPA:</span>
+                    <button id="admin-reveal-btn" class="admin-btn" onclick="Game.adminToggle('reveal')">OFF</button>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 320px; margin: 0 auto;">
+                    <span>VELOCIDADE (2x):</span>
+                    <button id="admin-speed-btn" class="admin-btn" onclick="Game.adminToggle('speed')">OFF</button>
+                </div>
+            </div>
+            <button id="admin-close-btn" style="border-color: #00FF00; color: #00FF00; margin-top: 20px; font-size: 1.2rem; font-family: 'Share Tech Mono', monospace;">[ VOLTAR ]</button>
         </div>
     </div>
 

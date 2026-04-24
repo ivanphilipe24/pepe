@@ -9,8 +9,11 @@ const Net = (() => {
 
     function init() {
         if (typeof io !== 'undefined') {
-            // Liga explicitamente ao servidor local e força websocket para evitar erros de CORS via polling
-            socket = io("http://localhost:3000", {
+            // Usa o host atual se disponível (importante para mobile na mesma rede)
+            // Se abrir como arquivo local, tenta localhost:3000 como fallback
+            const serverUrl = window.location.hostname !== '' ? window.location.origin : "http://localhost:3000";
+            
+            socket = io(serverUrl, {
                 transports: ['websocket'],
                 upgrade: false
             });

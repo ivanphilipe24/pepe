@@ -38,17 +38,32 @@ const Entity = (() => {
   });
 
   /* ── level settings ─────────────────────────────── */
-  const LEVEL_SPEEDS  = [2.2, 2.8, 3.2, 3.8, 3.0, 4.5];
   const LEVEL_PATH_IV = [1.8, 1.4, 1.0, 0.6, 1.2, 0.4];
 
   function init(level){
-    const lvl = Math.min(level, LEVEL_SPEEDS.length-1);
-    row=1; col=1;
+    const lvl = Math.min(level, LEVEL_PATH_IV.length-1);
+    
+    // Ponto de spawn dinâmico para a Entidade
+    let sr = 1, sc = 1;
+    if(!GameMap.walkable(sr, sc, false)) {
+        outer: for(let r=1; r<GameMap.ROWS-1; r++) {
+            for(let c=1; c<GameMap.COLS-1; c++) {
+                if(GameMap.walkable(r, c, false)) {
+                    sr = r; sc = c;
+                    break outer;
+                }
+            }
+        }
+    }
+
+    row=sr; col=sc;
     targetRow=row; targetCol=col;
     x=col*GameMap.TILE+GameMap.TILE/2;
     y=row*GameMap.TILE+GameMap.TILE/2;
     dir=DIRS[1]; // down
-    speed = LEVEL_SPEEDS[lvl];
+    
+    // Aumenta a velocidade base (2.2) em 10% a cada fase (level)
+    speed = 2.2 * Math.pow(1.10, level);
     pathInterval = LEVEL_PATH_IV[lvl];
     pathTimer=0;
     moving=false;
@@ -240,5 +255,10 @@ const Entity = (() => {
   function isTeleporting() { return teleportEffectTimer > 0; }
   function isActive(){ return active; }
 
-  return { init,activate,update,getPos,getDir,getMouth,getBlood,isActive, forcePos, updateManual, animateMouth, freeze, isFrozen, isTeleporting };
+  function syncPixels() {
+      x = col * GameMap.TILE + GameMap.TILE / 2;
+      y = row * GameMap.TILE + GameMap.TILE / 2;
+  }
+
+  return { init,activate,update,getPos,getDir,getMouth,getBlood,isActive, forcePos, updateManual, animateMouth, freeze, isFrozen, isTeleporting, syncPixels };
 })();
