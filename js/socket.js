@@ -9,13 +9,29 @@ const Net = (() => {
 
     function init() {
         if (typeof io !== 'undefined') {
-            // Usa o host atual se disponível (importante para mobile na mesma rede)
-            // Se abrir como arquivo local, tenta localhost:3000 como fallback
-            const serverUrl = window.location.hostname !== '' ? window.location.origin : "http://localhost:3000";
+            const hostname = window.location.hostname;
+            const isGitHub = hostname.includes('github.io');
+            
+            // Se estiver no GitHub Pages, não tenta conectar a menos que haja um servidor externo
+            // Para testar localmente, o hostname será 'localhost' ou vazio
+            let serverUrl = (hostname === '' || hostname === 'localhost' || hostname === '127.0.0.1') 
+                ? "http://localhost:3000" 
+                : window.location.origin;
+
+            if (isGitHub) {
+                console.warn("Ambiente GitHub Pages detectado. O Socket.io requer um servidor externo (ex: Render/Railway).");
+                // Se você tiver um servidor externo, substitua a linha abaixo por:
+                // serverUrl = "https://seu-servidor.onrender.com";
+                // Por enquanto, vamos impedir a conexão errada que gera o 404
+                _setupUI();
+                return; 
+            }
             
             socket = io(serverUrl, {
                 transports: ['websocket'],
-                upgrade: false
+                upgrade: false,
+                reconnection: true,
+                reconnectionAttempts: 5
             });
             _setupEvents();
             _setupUI();
@@ -77,6 +93,7 @@ const Net = (() => {
         });
 
         mpJoinNavBtn.addEventListener('click', () => {
+            if (!socket) return alert("ERRO: O servidor multiplayer não está rodando ou não foi configurado para o GitHub Pages.");
             hideAllSections();
             joinRoomUI.style.display = 'flex';
             joinAuthUI.style.display = 'none';
@@ -90,6 +107,7 @@ const Net = (() => {
 
         // Logical Actions
         confirmCreateBtn.addEventListener('click', () => {
+            if (!socket) return alert("ERRO: Sem conexão com o servidor.");
             const name = document.getElementById('create-name').value.trim();
             const pass = document.getElementById('create-pass').value.trim();
             const kClass = document.getElementById('create-killer-class').value;
