@@ -37,7 +37,8 @@ const Net = (() => {
                 }
             });
         } else {
-            console.error('PeerJS não carregado.');
+            console.warn('PeerJS ainda não carregado. Tentando novamente em 1s...');
+            setTimeout(init, 1000);
         }
     }
 
