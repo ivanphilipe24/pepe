@@ -9,37 +9,46 @@ const Net = (() => {
     window.isPowerModeActive = false;
 
     function init() {
+        // Inicializa a UI imediatamente para os botões funcionarem
+        _setupUI();
+
         if (typeof Peer !== 'undefined') {
-            peer = new Peer();
-            
-            peer.on('open', (id) => {
-                myId = id;
-                console.log('Meu Peer ID:', id);
-                _setupUI();
-            });
-
-            peer.on('connection', (incomingConn) => {
-                if (conn) {
-                    incomingConn.close();
-                    return;
-                }
-                isHost = true;
-                conn = incomingConn;
-                _setupDataEvents();
-            });
-
-            peer.on('error', (err) => {
-                console.error('PeerJS Error:', err);
-                const mpError = document.getElementById('mp-error');
-                if (mpError) {
-                    mpError.style.display = 'block';
-                    mpError.textContent = 'ERRO DE CONEXÃO: ' + err.type;
-                }
-            });
+            _connectPeer();
         } else {
             console.warn('PeerJS ainda não carregado. Tentando novamente em 1s...');
             setTimeout(init, 1000);
         }
+    }
+
+    function _connectPeer() {
+        if (peer) return;
+        peer = new Peer();
+        
+        peer.on('open', (id) => {
+            myId = id;
+            console.log('Meu Peer ID:', id);
+            const lobbyCode = document.getElementById('lobby-code');
+            if(lobbyCode) lobbyCode.textContent = id;
+        });
+
+        peer.on('connection', (incomingConn) => {
+            if (conn) {
+                incomingConn.close();
+                return;
+            }
+            isHost = true;
+            conn = incomingConn;
+            _setupDataEvents();
+        });
+
+        peer.on('error', (err) => {
+            console.error('PeerJS Error:', err);
+            const mpError = document.getElementById('mp-error');
+            if (mpError) {
+                mpError.style.display = 'block';
+                mpError.textContent = 'ERRO DE REDE: ' + err.type;
+            }
+        });
     }
 
     function _setupUI() {
@@ -102,6 +111,7 @@ const Net = (() => {
         }));
 
         confirmCreateBtn.addEventListener('click', () => {
+            if (!myId) return alert("Aguarde... a rede ainda está carregando.");
             const name = document.getElementById('create-name').value.trim();
             if (!name) return alert("Digite seu nome!");
             myName = name.toUpperCase();
@@ -110,13 +120,12 @@ const Net = (() => {
             hideAllSections();
             lobbyUI.style.display = 'block';
             document.getElementById('lobby-code').textContent = myId;
-            
-            // O host fica esperando a conexão (peer.on('connection') já lida com isso)
         });
 
         confirmJoinBtn.addEventListener('click', () => {
+            if (!peer) return alert("Aguarde... a rede ainda está carregando.");
             const name = document.getElementById('join-name').value.trim();
-            const hostId = document.getElementById('join-pass').value.trim(); // Usando o campo de senha para o ID
+            const hostId = document.getElementById('join-pass').value.trim(); 
 
             if (!name) return alert("Digite seu nome!");
             if (!hostId) return alert("Digite o CÓDIGO da sala!");
