@@ -8,11 +8,16 @@ const Net = (() => {
     let isHost = false;
     window.isPowerModeActive = false;
 
+    let uiInitialized = false;
     function init() {
-        // Inicializa a UI imediatamente para os botões funcionarem
-        _setupUI();
+        if (!uiInitialized) {
+            _setupUI();
+            uiInitialized = true;
+            console.log('Multiplayer UI inicializada.');
+        }
 
         if (typeof Peer !== 'undefined') {
+            console.log('PeerJS detectado, conectando...');
             _connectPeer();
         } else {
             console.warn('PeerJS ainda não carregado. Tentando novamente em 1s...');
