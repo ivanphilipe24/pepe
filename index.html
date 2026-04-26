@@ -63,14 +63,13 @@
             </div>
 
             <!-- SALA DE ESPERA (HOST) -->
-            <div id="lobby-ui" style="display:none; margin-top:20px; padding: 20px; border: 2px solid #00FFFF; background: rgba(0,255,255,0.05); animation: pulse-border 2s infinite;">
-                <div style="color:#00FFFF; font-size: 1rem; letter-spacing: 2px; margin-bottom: 10px;">CÓDIGO: <span id="lobby-code" style="color:#fff;">---</span></div>
-                <div style="font-size:0.9rem; color:#fff; letter-spacing: 1px; background: #00FFFF; color: #000; padding: 5px; display: inline-block;">AGUARDANDO ADVERSÁRIO...</div>
-                <p style="font-size: 0.8rem; color: #888; margin-top: 15px;">Envie este código para o seu adversário.</p>
+            <div id="lobby-ui" style="display:none; margin-top:20px; padding: 20px; border: 2px solid #00FFFF; background: rgba(0,255,255,0.05);">
+                <div style="color:#00FFFF; font-size: 1.2rem; letter-spacing: 2px; margin-bottom: 10px;">SALA: <span id="lobby-code" style="color:#fff;">----</span></div>
+                <div style="font-size:0.9rem; color:#fff; letter-spacing: 1px;">AGUARDANDO ADVERSÁRIO...</div>
                 <button class="mp-cancel-btn" style="margin-top: 15px; font-size: 1rem;">[ ABANDONAR ]</button>
             </div>
 
-            <div id="mp-error" style="color:#ff4444; margin-top:15px; font-size:0.9rem; font-weight: bold; text-shadow: 0 0 5px #000; background: rgba(0,0,0,0.7); padding: 5px; display: none;"></div>
+            <div id="mp-error" style="color:#ff4444; margin-top:15px; font-size:0.9rem; font-weight: bold; text-shadow: 0 0 5px #000; display: none;"></div>
 
             <div class="lore">
                 <p>O chão afunda sob seus pés trêmulos. O familiar zumbido neon foi substituído pelo gotejar doentio e pelo estalo mastigatório de dentes afiados.</p>
@@ -229,7 +228,7 @@
         </div>
     </div>
 
-    <script src="js/peer.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
     <script src="js/socket.js"></script>
     <script src="js/map.js"></script>
     <script src="js/audio.js"></script>

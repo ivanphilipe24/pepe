@@ -1,91 +1,133 @@
 const Net = (() => {
-    let peer = null;
-    let conn = null;
-    let myId = null;
+    let socket = null;
     let myRole = null;
-    let myName = null;
+    let opponentName = "";
     let opponentData = null;
-    let isHost = false;
-    window.isPowerModeActive = false;
+    let roomCode = null;
+    
+    // URL do servidor (Altere para a URL do Render/Railway quando hospedar)
+    const SERVER_URL = "http://localhost:3000"; 
 
-    let uiInitialized = false;
     function init() {
-        if (!uiInitialized) {
-            _setupUI();
-            uiInitialized = true;
-            console.log('Multiplayer UI inicializada.');
-        }
-
-        if (typeof Peer !== 'undefined') {
-            console.log('PeerJS detectado, conectando...');
-            _connectPeer();
-        } else {
-            console.warn('PeerJS ainda não carregado. Tentando novamente em 1s...');
-            setTimeout(init, 1000);
-        }
-    }
-
-    function _connectPeer() {
-        if (peer) return;
-        peer = new Peer();
+        console.log("Tentando conectar ao servidor:", SERVER_URL);
         
-        peer.on('open', (id) => {
-            myId = id;
-            console.log('Meu Peer ID:', id);
-            const lobbyCode = document.getElementById('lobby-code');
-            if(lobbyCode) lobbyCode.textContent = id;
+        try {
+            socket = io(SERVER_URL, {
+                reconnectionAttempts: 5,
+                timeout: 10000
+            });
+        } catch (e) {
+            console.error("Erro ao carregar Socket.io:", e);
+            _showError("Erro técnico: Biblioteca Socket.io não encontrada.");
+            return;
+        }
+
+        _setupUI();
+
+        socket.on('connect', () => {
+            console.log("Conectado ao servidor!");
+            document.getElementById('mp-error').style.display = 'none';
         });
 
-        peer.on('connection', (incomingConn) => {
-            if (conn) {
-                incomingConn.close();
-                return;
-            }
-            isHost = true;
-            conn = incomingConn;
-            _setupDataEvents();
+        socket.on('connect_error', () => {
+            console.warn("Ambiente GitHub Pages detectado ou Servidor Offline.");
+            _showError("Erro: Sem conexão com o servidor. Verifique se o servidor está online.");
         });
 
-        peer.on('error', (err) => {
-            console.error('PeerJS Error:', err);
-            const mpError = document.getElementById('mp-error');
-            if (mpError) {
-                mpError.style.display = 'block';
-                mpError.textContent = 'ERRO DE REDE: ' + err.type;
+        socket.on('roomCreated', (data) => {
+            roomCode = data.code;
+            document.getElementById('create-room-ui').style.display = 'none';
+            document.getElementById('lobby-ui').style.display = 'block';
+            document.getElementById('lobby-code').textContent = roomCode;
+        });
+
+        socket.on('roomList', (rooms) => {
+            const listEl = document.getElementById('room-list');
+            listEl.innerHTML = "";
+            if (rooms.length === 0) {
+                listEl.innerHTML = '<div style="color: #444; padding: 20px;">Nenhuma sala encontrada.</div>';
+            } else {
+                rooms.forEach(room => {
+                    const div = document.createElement('div');
+                    div.className = 'room-item';
+                    div.style = "padding: 10px; border-bottom: 1px solid #222; cursor: pointer; text-align: left;";
+                    div.innerHTML = `<strong>SALA: ${room.id}</strong> <br> <span style="font-size:0.8rem; color:#888;">Dono: ${room.owner}</span>`;
+                    div.onclick = () => _selectRoom(room.id);
+                    listEl.appendChild(div);
+                });
             }
+        });
+
+        socket.on('gameStart', (data) => {
+            myRole = data.role;
+            opponentName = data.opponentName;
+            
+            // Aplicar skins do oponente se enviadas
+            if(data.opponentKillerSkin) window.opponentKillerSkin = data.opponentKillerSkin;
+            if(data.opponentInnocentSkin) window.opponentInnocentSkin = data.opponentInnocentSkin;
+            
+            // Aplicar classe do assassino
+            if(data.killerClass) window.activeKillerClass = data.killerClass;
+
+            console.log("Jogo Iniciado! Role:", myRole, "Oponente:", opponentName);
+            
+            document.getElementById('lobby-ui').style.display = 'none';
+            document.getElementById('join-room-ui').style.display = 'none';
+            Game.startMultiplayer(myRole);
+        });
+
+        socket.on('updatePlayer', (data) => {
+            opponentData = data;
+        });
+
+        socket.on('dotCollected', (data) => {
+            GameMap.removeDot(data.r, data.c);
+        });
+
+        socket.on('growlEffect', () => {
+            Game.triggerGrowlEffect();
+        });
+
+        socket.on('dashEffect', (data) => {
+            Game.triggerDashEffect(data);
+        });
+
+        socket.on('applyPowerColors', () => {
+            Game.setPowerMode(true);
+        });
+
+        socket.on('resetColors', () => {
+            Game.setPowerMode(false);
+        });
+
+        socket.on('killerEaten', (data) => {
+            Game.handleKillerEaten(data.r, data.c);
+        });
+
+        socket.on('gameOver', (data) => {
+            Game.networkGameOver(data.winner);
+        });
+
+        socket.on('rewardCoins', (data) => {
+            // Lógica de recompensa se necessário (pode ser feita no main.js via Game.networkGameOver)
+        });
+
+        socket.on('opponentDisconnected', () => {
+            Game.networkDisconnect();
+        });
+
+        socket.on('errorMsg', (msg) => {
+            alert(msg);
         });
     }
 
     function _setupUI() {
-        const mpMenuBtn       = document.getElementById('mp-menu-btn');
-        const mpCreateNavBtn  = document.getElementById('mp-create-nav-btn');
-        const mpJoinNavBtn    = document.getElementById('mp-join-nav-btn');
-        const mpBackBtn       = document.getElementById('mp-back-btn');
-        
-        const mainMenuContent = document.querySelector('.menu-content > #play-btn').parentElement;
-        const mpSubmenu       = document.getElementById('mp-submenu');
-        const createRoomUI    = document.getElementById('create-room-ui');
-        const joinRoomUI      = document.getElementById('join-room-ui');
-        const lobbyUI         = document.getElementById('lobby-ui');
-        const joinAuthUI      = document.getElementById('join-room-auth');
-        
-        const confirmCreateBtn = document.getElementById('confirm-create-btn');
-        const confirmJoinBtn   = document.getElementById('confirm-join-btn');
-        const cancelBtns       = document.querySelectorAll('.mp-cancel-btn');
-        const mpError          = document.getElementById('mp-error');
-
-        function hideAllSections() {
-            [mpSubmenu, createRoomUI, joinRoomUI, lobbyUI].forEach(s => s.style.display = 'none');
-            document.getElementById('play-btn').style.display = 'none';
-            mpMenuBtn.style.display = 'none';
-            if(mpError) mpError.style.display = 'none';
-        }
-
-        function resetToMain() {
-            hideAllSections();
-            document.getElementById('play-btn').style.display = 'inline-block';
-            document.getElementById('mp-menu-btn').style.display = 'inline-block';
-        }
+        const mpMenuBtn = document.getElementById('mp-menu-btn');
+        const mpSubmenu = document.getElementById('mp-submenu');
+        const createBtn = document.getElementById('mp-create-nav-btn');
+        const joinBtn = document.getElementById('mp-join-nav-btn');
+        const backBtn = document.getElementById('mp-back-btn');
+        const cancelBtns = document.querySelectorAll('.mp-cancel-btn');
 
         mpMenuBtn.addEventListener('click', () => {
             document.getElementById('play-btn').style.display = 'none';
@@ -93,211 +135,85 @@ const Net = (() => {
             mpSubmenu.style.display = 'flex';
         });
 
-        mpBackBtn.addEventListener('click', resetToMain);
-
-        mpCreateNavBtn.addEventListener('click', () => {
-            hideAllSections();
-            createRoomUI.style.display = 'flex';
+        backBtn.addEventListener('click', () => {
+            mpSubmenu.style.display = 'none';
+            document.getElementById('play-btn').style.display = 'block';
+            mpMenuBtn.style.display = 'block';
         });
 
-        mpJoinNavBtn.addEventListener('click', () => {
-            hideAllSections();
-            joinRoomUI.style.display = 'flex';
-            joinAuthUI.style.display = 'flex';
-            // Em P2P, a lista de salas não existe sem servidor, então pedimos o código
-            const roomList = document.getElementById('room-list');
-            if(roomList) roomList.innerHTML = '<div style="color: #00FFFF; padding: 10px;">DIGITE O CÓDIGO DO SEU AMIGO ABAIXO:</div>';
+        createBtn.addEventListener('click', () => {
+            mpSubmenu.style.display = 'none';
+            document.getElementById('create-room-ui').style.display = 'flex';
         });
 
-        cancelBtns.forEach(btn => btn.addEventListener('click', () => {
-            if (conn) conn.close();
-            conn = null;
-            resetToMain();
-        }));
+        joinBtn.addEventListener('click', () => {
+            mpSubmenu.style.display = 'none';
+            document.getElementById('join-room-ui').style.display = 'flex';
+            socket.emit('requestRooms');
+        });
 
-        confirmCreateBtn.addEventListener('click', () => {
-            if (!myId) return alert("Aguarde... a rede ainda está carregando.");
-            const name = document.getElementById('create-name').value.trim();
-            if (!name) return alert("Digite seu nome!");
-            myName = name.toUpperCase();
+        cancelBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('create-room-ui').style.display = 'none';
+                document.getElementById('join-room-ui').style.display = 'none';
+                document.getElementById('lobby-ui').style.display = 'none';
+                mpSubmenu.style.display = 'flex';
+            });
+        });
+
+        document.getElementById('confirm-create-btn').addEventListener('click', () => {
+            const name = document.getElementById('create-name').value;
+            const pass = document.getElementById('create-pass').value;
+            const kClass = document.getElementById('create-killer-class').value;
             
-            isHost = true;
-            hideAllSections();
-            lobbyUI.style.display = 'block';
-            document.getElementById('lobby-code').textContent = myId;
+            socket.emit('createRoom', { 
+                playerName: name, 
+                password: pass, 
+                killerClass: kClass,
+                killerSkin: window.activeKillerSkin,
+                innocentSkin: window.activeInnocentSkin
+            });
         });
 
-        confirmJoinBtn.addEventListener('click', () => {
-            if (!peer) return alert("Aguarde... a rede ainda está carregando.");
-            const name = document.getElementById('join-name').value.trim();
-            const hostId = document.getElementById('join-pass').value.trim(); 
+        document.getElementById('confirm-join-btn').addEventListener('click', () => {
+            const code = roomCode; // Definido ao selecionar na lista
+            const name = document.getElementById('join-name').value;
+            const pass = document.getElementById('join-pass').value;
+            const kClass = document.getElementById('join-killer-class').value;
 
-            if (!name) return alert("Digite seu nome!");
-            if (!hostId) return alert("Digite o CÓDIGO da sala!");
-
-            myName = name.toUpperCase();
-            isHost = false;
-            
-            conn = peer.connect(hostId);
-            _setupDataEvents();
+            socket.emit('joinRoom', { 
+                code, 
+                playerName: name, 
+                password: pass,
+                killerClass: kClass,
+                killerSkin: window.activeKillerSkin,
+                innocentSkin: window.activeInnocentSkin
+            });
         });
     }
 
-    function _setupDataEvents() {
-        conn.on('open', () => {
-            console.log('Conexão P2P Aberta!');
-            
-            // Envia dados iniciais
-            if (isHost) {
-                // Host espera o cliente se apresentar ou inicia
-            } else {
-                send('hello', { 
-                    name: myName,
-                    killerClass: document.getElementById('join-killer-class').value,
-                    killerSkin: window.activeKillerSkin,
-                    innocentSkin: window.activeInnocentSkin
-                });
-            }
-        });
-
-        conn.on('data', (data) => {
-            const { type, payload } = data;
-            
-            switch (type) {
-                case 'hello':
-                    if (isHost) {
-                        // Host recebe o "oi" do cliente e inicia o jogo
-                        const isFirstKiller = Math.random() > 0.5;
-                        myRole = isFirstKiller ? 'KILLER' : 'INNOCENT';
-                        const opponentRole = isFirstKiller ? 'INNOCENT' : 'KILLER';
-                        
-                        const killerClass = document.getElementById('create-killer-class').value;
-                        
-                        send('gameStart', {
-                            role: opponentRole,
-                            opponentName: myName,
-                            killerClass: killerClass,
-                            opponentKillerSkin: window.activeKillerSkin,
-                            opponentInnocentSkin: window.activeInnocentSkin
-                        });
-
-                        // Inicia para si mesmo
-                        window.activeKillerClass = killerClass;
-                        window.opponentKillerSkin = payload.killerSkin;
-                        window.opponentInnocentSkin = payload.innocentSkin;
-                        document.getElementById('menu').style.display = 'none';
-                        Game.startMultiplayer(myRole);
-                    }
-                    break;
-
-                case 'gameStart':
-                    myRole = payload.role;
-                    window.activeKillerClass = payload.killerClass;
-                    window.opponentKillerSkin = payload.opponentKillerSkin;
-                    window.opponentInnocentSkin = payload.opponentInnocentSkin;
-                    document.getElementById('menu').style.display = 'none';
-                    Game.startMultiplayer(myRole);
-                    break;
-
-                case 'syncPlayer':
-                    opponentData = payload;
-                    break;
-
-                case 'dotCollected':
-                    if (typeof GameMap !== 'undefined') GameMap.forceCollectDot(payload.row, payload.col);
-                    break;
-
-                case 'growlEffect':
-                    if (typeof Game !== 'undefined') Game.triggerGrowlEffect();
-                    break;
-
-                case 'dashEffect':
-                    if (typeof Game !== 'undefined') Game.triggerDashEffect(payload);
-                    break;
-
-                case 'applyPowerColors':
-                    if (typeof Game !== 'undefined') Game.setPowerMode(true);
-                    window.isPowerModeActive = true;
-                    break;
-
-                case 'resetColors':
-                    if (typeof Game !== 'undefined') Game.setPowerMode(false);
-                    window.isPowerModeActive = false;
-                    break;
-
-                case 'killerEaten':
-                    if (typeof Game !== 'undefined') Game.handleKillerEaten(payload.r, payload.c);
-                    break;
-
-                case 'gameOver':
-                    if (typeof Game !== 'undefined') Game.networkGameOver(payload.winner);
-                    break;
-
-                case 'rewardCoins':
-                    if (myRole === payload.winner && typeof Game !== 'undefined') {
-                        Game.addCoins(5);
-                    }
-                    break;
-
-                case 'opponentDisconnected':
-                    if (typeof Game !== 'undefined') Game.networkDisconnect();
-                    break;
-            }
-        });
-
-        conn.on('close', () => {
-            if (typeof Game !== 'undefined') Game.networkDisconnect();
-        });
+    function _selectRoom(code) {
+        roomCode = code;
+        document.getElementById('join-room-auth').style.display = 'flex';
     }
 
-    function send(type, payload) {
-        if (conn && conn.open) {
-            conn.send({ type, payload });
-        }
+    function _showError(msg) {
+        const errEl = document.getElementById('mp-error');
+        errEl.textContent = msg;
+        errEl.style.display = 'block';
     }
 
+    // API Pública
     return {
         init,
-        syncState: (data) => { if (conn) send('syncPlayer', data); },
-        emitDotCollected: (row, col) => { if (conn && myRole === 'INNOCENT') send('dotCollected', { row, col }); },
-        emitGrowl: () => { if (conn && myRole === 'KILLER') send('growlEffect'); },
-        emitDash: (data) => { if (conn && myRole === 'KILLER') send('dashEffect', data); },
-        emitCaught: () => { 
-            if (conn && myRole === 'KILLER' && !window.isPowerModeActive) {
-                send('gameOver', { winner: 'KILLER' });
-                send('rewardCoins', { winner: 'KILLER' });
-                if (typeof Game !== 'undefined') Game.networkGameOver('KILLER');
-            }
-        },
-        emitIAmCaught: () => {
-            if (conn && myRole === 'INNOCENT' && !window.isPowerModeActive) {
-                send('gameOver', { winner: 'KILLER' });
-                send('rewardCoins', { winner: 'KILLER' });
-                if (typeof Game !== 'undefined') Game.networkGameOver('KILLER');
-            }
-        },
-        emitKillerEaten: (data) => { if (conn) send('killerEaten', data); },
-        emitPowerActivated: () => { 
-            if (conn && myRole === 'INNOCENT') {
-                send('applyPowerColors');
-                if (typeof Game !== 'undefined') Game.setPowerMode(true);
-                window.isPowerModeActive = true;
-                setTimeout(() => {
-                    send('resetColors');
-                    if (typeof Game !== 'undefined') Game.setPowerMode(false);
-                    window.isPowerModeActive = false;
-                }, 10000);
-            }
-        },
-        emitAllDotsCollected: () => { 
-            if (conn && myRole === 'INNOCENT') {
-                send('gameOver', { winner: 'INNOCENT' });
-                send('rewardCoins', { winner: 'INNOCENT' });
-                if (typeof Game !== 'undefined') Game.networkGameOver('INNOCENT');
-            }
-        },
-        getRole: () => myRole,
-        getMyName: () => myName,
-        getOpponentData: () => opponentData,
+        syncState: (data) => socket.emit('syncPlayer', data),
+        emitDotCollected: (r, c) => socket.emit('collectDot', { r, c }),
+        emitAllDotsCollected: () => socket.emit('allDotsCollected'),
+        emitGrowl: () => socket.emit('killerGrowl'),
+        emitDash: (data) => socket.emit('dashUsed', data),
+        emitPowerActivated: () => socket.emit('powerActivated'),
+        emitKillerEaten: (data) => socket.emit('killerEaten', data),
+        emitIAmCaught: () => socket.emit('playerCaught'),
+        getOpponentData: () => opponentData
     };
 })();
