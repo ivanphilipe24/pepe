@@ -64,6 +64,10 @@ const Entity = (() => {
     
     // Aumenta a velocidade base (2.2) em 10% a cada fase (level)
     speed = 2.2 * Math.pow(1.10, level);
+    
+    // STALKER é 20% mais lento
+    if(window.activeKillerClass === 'STALKER') speed *= 0.8;
+
     pathInterval = LEVEL_PATH_IV[lvl];
     pathTimer=0;
     moving=false;
@@ -237,9 +241,41 @@ const Entity = (() => {
       if(fmouth !== undefined) mouthPhase = fmouth;
   }
 
+  function forceHunting(pr, pc) {
+      if(!active || freezeTimer > 0) return;
+      chasing = true;
+      pathTimer = pathInterval; // Força recálculo no próximo frame
+      scatterTarget = {r: pr, c: pc}; // Garante que o fallback também aponte para o jogador
+  }
+
   function freeze(ms) {
       freezeTimer = ms / 1000;
       teleportEffectTimer = 2.0; // 2 segundos de brilho
+  }
+
+  function calculateDash(blocks) {
+      if(!active) return null;
+      let r = row, c = col;
+      // Procura o tile mais distante (até blocks) que seja "walkable",
+      // permitindo pular paredes (atravessar paredes finas)
+      for(let i = blocks; i >= 1; i--) {
+          let tr = row + dir.dr * i;
+          let tc = col + dir.dc * i;
+          
+          if(tc < 0) tc += GameMap.COLS;
+          if(tc >= GameMap.COLS) tc -= GameMap.COLS;
+          if(tr < 0 || tr >= GameMap.ROWS) continue; // Out of bounds vertical
+          
+          if(GameMap.walkable(tr, tc, false)) {
+              return { 
+                  r: tr, 
+                  c: tc, 
+                  x: tc * GameMap.TILE + GameMap.TILE / 2, 
+                  y: tr * GameMap.TILE + GameMap.TILE / 2 
+              };
+          }
+      }
+      return null;
   }
 
   function animateMouth(dt) {
@@ -260,5 +296,5 @@ const Entity = (() => {
       y = row * GameMap.TILE + GameMap.TILE / 2;
   }
 
-  return { init,activate,update,getPos,getDir,getMouth,getBlood,isActive, forcePos, updateManual, animateMouth, freeze, isFrozen, isTeleporting, syncPixels };
+  return { init,activate,update,getPos,getDir,getMouth,getBlood,isActive, forcePos, updateManual, animateMouth, freeze, isFrozen, isTeleporting, syncPixels, forceHunting, calculateDash };
 })();

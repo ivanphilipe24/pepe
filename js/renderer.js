@@ -207,7 +207,7 @@ const Renderer = (() => {
   }
 
   // Rewrite render flow for proper clipping
-  function renderAll(dt, player, entity, levelMap, level, proximity, myRole, isPowerModeActive){
+  function renderAll(dt, player, entity, levelMap, level, proximity, myRole, isPowerModeActive, ghosts = []){
     const gW = GameMap.COLS * TILE, gH = GameMap.ROWS * TILE;
     
     let offsetX, offsetY;
@@ -255,11 +255,28 @@ const Renderer = (() => {
     }
 
     // 2. Player (Ghost)
-    _drawGhost(Player.getPos().x, Player.getPos().y);
+    _drawGhost(Player.getPos().x, Player.getPos().y, false, myRole);
 
     // 3. Entity (Pac-Man)
     if(Entity.isActive()){
-      _drawEntity(Entity.getPos().x, Entity.getPos().y, Entity.getDir(), Entity.getMouth(), level, proximity, isPowerModeActive);
+      _drawEntity(Entity.getPos().x, Entity.getPos().y, Entity.getDir(), Entity.getMouth(), level, proximity, isPowerModeActive, myRole);
+    }
+
+    // 3.5 Fantasmas (Alucinações)
+    if(ghosts && ghosts.length > 0) {
+        for(const g of ghosts) {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, g.alpha * 0.5); // Translúcido
+            const pPos = player.getPos();
+            const dx = pPos.x - g.x;
+            const dy = pPos.y - g.y;
+            let dirName = 'up';
+            if(Math.abs(dx) > Math.abs(dy)) dirName = dx > 0 ? 'right' : 'left';
+            else dirName = dy > 0 ? 'down' : 'up';
+            
+            _drawEntity(g.x, g.y, {name: dirName}, 0.5, level, 0.5, false, myRole); // Proximity 0.5 for some jitter
+            ctx.restore();
+        }
     }
 
     ctx.restore();
@@ -272,31 +289,13 @@ const Renderer = (() => {
     }
   }
 
-  function _drawGhost(x, y){
-    const r = TILE*0.6;
-    const isPower = window.isPowerModeActive;
-    ctx.fillStyle = isPower ? '#FFFF00' : '#FF0000'; // Vermelho -> Amarelo (Energizado)
-    ctx.beginPath();
-    ctx.arc(x,y-r*0.2,r,Math.PI,0);
-    ctx.lineTo(x+r,y+r);
-    // wavy bottom
-    ctx.lineTo(x+r/2,y+r-4);
-    ctx.lineTo(x,y+r);
-    ctx.lineTo(x-r/2,y+r-4);
-    ctx.lineTo(x-r,y+r);
-    ctx.closePath();
-    ctx.fill();
 
-    // Eyes
-    ctx.fillStyle = 'white';
-    ctx.beginPath(); ctx.arc(x-r/3,y-r/3,r/3.5,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x+r/3,y-r/3,r/3.5,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle = 'blue';
-    ctx.beginPath(); ctx.arc(x-r/3,y-r/3,r/6,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x+r/3,y-r/3,r/6,0,Math.PI*2); ctx.fill();
-  }
 
-  function _drawEntity(x, y, dir, mouthPhase, level, proximity, isPowerModeActive){
+  function _drawEntity(x, y, dir, mouthPhase, level, proximity, isPowerModeActive, myRole){
+    if (window.activeKillerClass === 'STALKER' && myRole === 'INNOCENT' && !window.isStalkerRevealed) {
+        return; // Totalmente invisível até ser revelado
+    }
+
     const baseR = TILE * 0.8;
     // Jitter increases with proximity - "corrupted code" feel
     const jitter = proximity > 0.3 ? (Math.random() - 0.5) * 5 * proximity : 0;
@@ -319,10 +318,39 @@ const Renderer = (() => {
 
     // 1. Body Base
     const bodyGrad = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r);
+    const killerSkin = (myRole === 'KILLER') ? window.activeKillerSkin : window.opponentKillerSkin;
+    
     if(!isPowerModeActive) {
-        bodyGrad.addColorStop(0, '#C0C040'); // Sickly core
-        bodyGrad.addColorStop(0.7, '#A0A020'); // Dirty yellow
-        bodyGrad.addColorStop(1, '#605010'); // Dark edge
+        if(killerSkin === 'skin_blood_shadow') {
+            // Sombra de Sangue: Vermelho pulsante
+            const pulse = 0.7 + 0.3 * Math.sin(Date.now() / 200);
+            bodyGrad.addColorStop(0, `rgba(255, 0, 0, ${pulse})`);
+            bodyGrad.addColorStop(1, '#550000');
+        } else if(killerSkin === 'skin_observer') {
+            // O Observador: Cinza
+            bodyGrad.addColorStop(0, '#AAAAAA');
+            bodyGrad.addColorStop(0.7, '#666666');
+            bodyGrad.addColorStop(1, '#333333');
+        } else if(killerSkin === 'skin_toxic_glitch') {
+            // Toxic Glitch: Verde Neon
+            bodyGrad.addColorStop(0, '#00FF00');
+            bodyGrad.addColorStop(0.7, '#008800');
+            bodyGrad.addColorStop(1, '#004400');
+        } else if(killerSkin === 'skin_void') {
+            // Vazio: Preto total
+            bodyGrad.addColorStop(0, '#111111');
+            bodyGrad.addColorStop(1, '#000000');
+        } else if(killerSkin === 'skin_phantom_gold') {
+            // Ouro Fantasma: Dourado brilhante
+            bodyGrad.addColorStop(0, '#FFFACD');
+            bodyGrad.addColorStop(0.5, '#FFD700');
+            bodyGrad.addColorStop(1, '#B8860B');
+        } else {
+            // Default/Old skin_blood logic fallback
+            bodyGrad.addColorStop(0, '#C0C040'); // Sickly core
+            bodyGrad.addColorStop(0.7, '#A0A020'); // Dirty yellow
+            bodyGrad.addColorStop(1, '#605010'); // Dark edge
+        }
     } else {
         // VULNERABLE STATE: Bright Blue
         bodyGrad.addColorStop(0, '#00FFFF'); // Cyan core
@@ -398,25 +426,31 @@ const Renderer = (() => {
     const eyeX = -r * 0.1, eyeY = -r * 0.5;
     const eyeSize = r * 0.35 + (Math.random() * 2 * proximity);
     
-    // Sclera (Bloodshot white)
-    ctx.fillStyle = '#FFF0F0';
+    // Sclera (Bloodshot white usually)
+    let scleraColor = '#FFF0F0';
+    if(killerSkin === 'skin_observer') scleraColor = '#FFFFFF';
+    if(killerSkin === 'skin_phantom_gold') scleraColor = '#FFFFCC';
+    
+    ctx.fillStyle = scleraColor;
     ctx.beginPath();
     ctx.arc(eyeX, eyeY, eyeSize, 0, Math.PI * 2);
     ctx.fill();
     
-    // Blood vessels in eye
-    ctx.strokeStyle = 'rgba(200, 0, 0, 0.6)';
-    ctx.lineWidth = 0.5;
-    for(let i=0; i<6; i++) {
-        const a = Math.random() * Math.PI * 2;
-        ctx.beginPath();
-        ctx.moveTo(eyeX, eyeY);
-        ctx.lineTo(eyeX + Math.cos(a)*eyeSize, eyeY + Math.sin(a)*eyeSize);
-        ctx.stroke();
+    // Blood vessels in eye (Except for some skins)
+    if(killerSkin !== 'skin_phantom_gold' && killerSkin !== 'skin_void') {
+        ctx.strokeStyle = killerSkin === 'skin_toxic_glitch' ? 'rgba(0, 200, 0, 0.6)' : 'rgba(200, 0, 0, 0.6)';
+        ctx.lineWidth = 0.5;
+        for(let i=0; i<6; i++) {
+            const a = Math.random() * Math.PI * 2;
+            ctx.beginPath();
+            ctx.moveTo(eyeX, eyeY);
+            ctx.lineTo(eyeX + Math.cos(a)*eyeSize, eyeY + Math.sin(a)*eyeSize);
+            ctx.stroke();
+        }
     }
     
     // Pupil (Realistic and small)
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = (killerSkin === 'skin_void') ? '#111111' : '#000000';
     // Pupil jitters/dilates
     const pupilSize = eyeSize * (0.3 + Math.random() * 0.2 * proximity);
     ctx.beginPath();
@@ -424,7 +458,14 @@ const Renderer = (() => {
     ctx.fill();
     
     // Pupil glow
-    ctx.fillStyle = isPowerModeActive ? 'rgba(0, 255, 255, 0.8)' : 'rgba(255, 0, 0, 0.8)';
+    let glowColor = 'rgba(255, 0, 0, 0.8)'; // Default Red
+    if(isPowerModeActive) glowColor = 'rgba(0, 255, 255, 0.8)';
+    else if(killerSkin === 'skin_toxic_glitch') glowColor = 'rgba(0, 255, 0, 0.8)';
+    else if(killerSkin === 'skin_phantom_gold') glowColor = 'rgba(255, 215, 0, 0.8)';
+    else if(killerSkin === 'skin_observer') glowColor = 'rgba(255, 255, 255, 0.9)';
+    else if(killerSkin === 'skin_void') glowColor = 'rgba(50, 50, 50, 0.5)';
+    
+    ctx.fillStyle = glowColor;
     ctx.beginPath();
     ctx.arc(eyeX, eyeY, pupilSize * 0.4, 0, Math.PI * 2);
     ctx.fill();
@@ -437,7 +478,13 @@ const Renderer = (() => {
        ctx.translate(x, y);
        ctx.globalCompositeOperation = 'screen';
        const aura = ctx.createRadialGradient(0, 0, r, 0, 0, r * (2 + proximity));
-       const auraCol = isPowerModeActive ? '0, 255, 255' : '255, 0, 0';
+       let auraCol = isPowerModeActive ? '0, 255, 255' : '255, 0, 0';
+       if(!isPowerModeActive) {
+           if(killerSkin === 'skin_toxic_glitch') auraCol = '0, 255, 0';
+           if(killerSkin === 'skin_phantom_gold') auraCol = '255, 215, 0';
+           if(killerSkin === 'skin_observer') auraCol = '200, 200, 200';
+           if(killerSkin === 'skin_void') auraCol = '20, 20, 20';
+       }
        aura.addColorStop(0, `rgba(${auraCol}, ${0.4 * proximity})`);
        aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
        ctx.fillStyle = aura;
@@ -516,53 +563,102 @@ const Renderer = (() => {
   }
 
   function _drawKillerVision(offsetX, offsetY){
-    const pPos = Player.getPos();
-    let px = pPos.x + offsetX, py = pPos.y + offsetY;
-    const pDir = Player.getDir();
-    const flicker = Player.getFlicker();
-
-    let angleBase = 0;
-    if(pDir.name==='right') angleBase = 0;
-    if(pDir.name==='down')  angleBase = Math.PI/2;
-    if(pDir.name==='left')  angleBase = Math.PI;
-    if(pDir.name==='up')    angleBase = -Math.PI/2;
-    angleBase += Player.getAngle();
-
-    // Killer vision is mostly clear but tinted red and dark around the edges
     const ePos = Entity.getPos();
     let ex = ePos.x + offsetX, ey = ePos.y + offsetY;
+    const eDir = Entity.getDir();
+    
+    // Create darkness centered on Entity
+    const darkCanvas = document.createElement('canvas');
+    darkCanvas.width = canvas.width; darkCanvas.height = canvas.height;
+    const dx = darkCanvas.getContext('2d');
+    
+    dx.fillStyle = '#000000';
+    dx.fillRect(0,0,darkCanvas.width,darkCanvas.height);
+    
+    dx.globalCompositeOperation = 'destination-out';
+    
+    const lightDist = TILE * 5; // Assassin has slightly smaller vision than flashlight
+    const spread = Math.PI * 2; // Assassin sees all around but limited distance
+    
+    const grad = dx.createRadialGradient(ex,ey,TILE, ex,ey,lightDist);
+    grad.addColorStop(0, 'rgba(255,255,255,1)');
+    grad.addColorStop(0.7, 'rgba(255,255,255,0.6)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    
+    dx.fillStyle = grad;
+    dx.beginPath();
+    dx.arc(ex,ey,lightDist, 0, Math.PI*2);
+    dx.fill();
     
     ctx.globalCompositeOperation = 'source-over';
-    
-    // Slight darkness over everything
-    ctx.fillStyle = 'rgba(50, 0, 0, 0.4)'; // Blood vision
+    ctx.drawImage(darkCanvas, 0, 0);
+
+    // Tint red for killer feel
+    ctx.fillStyle = 'rgba(255, 0, 0, 0.15)';
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // Vignette
-    const rad = Math.max(window.innerWidth, window.innerHeight);
-    const grad = ctx.createRadialGradient(ex,ey,TILE*5, ex,ey,rad);
-    grad.addColorStop(0, 'rgba(0,0,0,0)');
-    grad.addColorStop(1, 'rgba(0,0,0,0.85)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0,0,canvas.width,canvas.height);
+    // Render innocent flashlight beam REMOVIDO para que o Assassino não veja a luz do Inocente
 
-    // Render innocent flashlight beam in yellow/white so Killer can see it through walls!
-    const lightDist = TILE * 6 * flicker;
-    const spread = Math.PI / 4.0;
+    // Banshee Silhouette Vision
+    if(window.activeKillerClass === 'BANSHEE' && window.opponentSanity !== undefined && window.opponentSanity < 40) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        ctx.globalAlpha = 0.6;
+        _drawGhost(px, py, true); // True flag for silhouette mode
+        ctx.restore();
+    }
+  }
+
+  function _drawGhost(x, y, isSilhouette = false, myRole = null){
+    const r = TILE*0.6;
+    const isPower = window.isPowerModeActive;
     
-    if(flicker > 0){
-      ctx.globalCompositeOperation = 'screen';
-      const fGrad = ctx.createRadialGradient(px,py,TILE, px,py,lightDist);
-      fGrad.addColorStop(0, 'rgba(255,255,100,0.4)');
-      fGrad.addColorStop(0.8, 'rgba(255,255,100,0.1)');
-      fGrad.addColorStop(1, 'rgba(255,255,100,0)');
-      
-      ctx.fillStyle = fGrad;
-      ctx.beginPath();
-      ctx.moveTo(px,py);
-      ctx.arc(px,py,lightDist, angleBase-spread, angleBase+spread);
-      ctx.closePath();
-      ctx.fill();
+    const innocentSkin = (myRole === 'INNOCENT') ? window.activeInnocentSkin : window.opponentInnocentSkin;
+    
+    let baseColor = '#FF0000'; // Default Innocent Color (Reddish Ghost)
+    if (isPower) baseColor = '#FFFF00';
+    else {
+        if (innocentSkin === 'skin_observer') baseColor = '#AAAAAA';
+        else if (innocentSkin === 'skin_toxic_glitch') baseColor = '#00FFFF';
+    }
+
+    ctx.fillStyle = isSilhouette ? '#FF0000' : baseColor; 
+    
+    // Pulse effect for silhouette or specific skins
+    if(isSilhouette || (innocentSkin === 'skin_toxic_glitch' && !isPower)) {
+        const pulse = 0.8 + 0.2 * Math.sin(Date.now() / 150);
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(pulse, pulse);
+        ctx.translate(-x, -y);
+        ctx.shadowColor = isSilhouette ? '#FF0000' : '#00FFFF';
+        ctx.shadowBlur = 15;
+    }
+
+    ctx.beginPath();
+    ctx.arc(x,y-r*0.2,r,Math.PI,0);
+    ctx.lineTo(x+r,y+r);
+    // wavy bottom
+    ctx.lineTo(x+r/2,y+r-4);
+    ctx.lineTo(x,y+r);
+    ctx.lineTo(x-r/2,y+r-4);
+    ctx.lineTo(x-r,y+r);
+    ctx.closePath();
+    ctx.fill();
+
+    if(isSilhouette || (innocentSkin === 'skin_toxic_glitch' && !isPower)) {
+        ctx.restore();
+    }
+
+    // Eyes
+    if(!isSilhouette) {
+        ctx.fillStyle = (innocentSkin === 'skin_observer') ? '#FFFFFF' : 'white';
+        ctx.beginPath(); ctx.arc(x-r/3,y-r/3,r/3.5,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x+r/3,y-r/3,r/3.5,0,Math.PI*2); ctx.fill();
+        
+        ctx.fillStyle = (innocentSkin === 'skin_observer') ? '#333333' : 'blue';
+        ctx.beginPath(); ctx.arc(x-r/3,y-r/3,r/6,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x+r/3,y-r/3,r/6,0,Math.PI*2); ctx.fill();
     }
   }
 

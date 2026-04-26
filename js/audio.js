@@ -7,6 +7,9 @@ const Audio = (() => {
   let ctx, master;
   let noiseBuffer;
   let isChasing = false;
+  let micStream = null;
+  let analyser = null;
+  let micDataArray = null;
 
   let fudoAudio = new window.Audio('assets/audio/fudo.mp3');
   fudoAudio.loop = true;
@@ -162,9 +165,36 @@ const Audio = (() => {
     o.stop(ctx.currentTime+0.06);
   }
 
+  async function initMic(){
+    if(!ctx) init();
+    if(micStream) return;
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      const source = ctx.createMediaStreamSource(micStream);
+      analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      micDataArray = new Uint8Array(analyser.frequencyBinCount);
+      console.log('Microphone initialized');
+    } catch(err) {
+      console.warn('Microphone access denied or error:', err);
+    }
+  }
+
+  function getMicVolume(){
+    if(!analyser || !micDataArray) return 0;
+    analyser.getByteFrequencyData(micDataArray);
+    let sum = 0;
+    for(let i=0; i<micDataArray.length; i++) {
+        sum += micDataArray[i];
+    }
+    return sum / micDataArray.length;
+  }
+
   return {
     init,resume,startDrone,stopDrone,
     playStep,stopSteps,playWaka,startChase,stopChase,
     playCollect,playDeath,playPortal,playVictory,click,
+    initMic,getMicVolume
   };
 })();

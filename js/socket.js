@@ -92,22 +92,36 @@ const Net = (() => {
         confirmCreateBtn.addEventListener('click', () => {
             const name = document.getElementById('create-name').value.trim();
             const pass = document.getElementById('create-pass').value.trim();
+            const kClass = document.getElementById('create-killer-class').value;
 
             if (!name) return alert("Digite seu nome!");
-            
             myName = name.toUpperCase();
-            socket.emit('createRoom', { playerName: myName, password: pass });
+            socket.emit('createRoom', { 
+                playerName: myName, 
+                password: pass, 
+                killerClass: kClass,
+                killerSkin: window.activeKillerSkin,
+                innocentSkin: window.activeInnocentSkin
+            });
         });
 
         confirmJoinBtn.addEventListener('click', () => {
             const name = document.getElementById('join-name').value.trim();
             const pass = document.getElementById('join-pass').value.trim();
+            const kClass = document.getElementById('join-killer-class').value;
 
             if (!name) return alert("Digite seu nome!");
             if (!selectedRoomId) return alert("Selecione uma sala primeiro!");
 
             myName = name.toUpperCase();
-            socket.emit('joinRoom', { code: selectedRoomId, playerName: myName, password: pass });
+            socket.emit('joinRoom', { 
+                code: selectedRoomId, 
+                playerName: myName, 
+                password: pass, 
+                killerClass: kClass,
+                killerSkin: window.activeKillerSkin,
+                innocentSkin: window.activeInnocentSkin
+            });
         });
     }
 
@@ -147,6 +161,9 @@ const Net = (() => {
 
         socket.on('gameStart', (data) => {
             myRole = data.role;
+            window.activeKillerClass = data.killerClass;
+            window.opponentKillerSkin = data.opponentKillerSkin;
+            window.opponentInnocentSkin = data.opponentInnocentSkin;
             document.getElementById('menu').style.display = 'none';
             Game.startMultiplayer(myRole);
         });
@@ -163,6 +180,7 @@ const Net = (() => {
             if (typeof GameMap !== 'undefined') GameMap.forceCollectDot(data.row, data.col);
         });
         socket.on('growlEffect', () => { if (typeof Game !== 'undefined') Game.triggerGrowlEffect(); });
+        socket.on('dashEffect', (data) => { if (typeof Game !== 'undefined') Game.triggerDashEffect(data); });
         socket.on('applyPowerColors', () => { 
             if (typeof Game !== 'undefined') Game.setPowerMode(true);
         });
@@ -173,6 +191,11 @@ const Net = (() => {
             if (typeof Game !== 'undefined') Game.handleKillerEaten(data.r, data.c);
         });
         socket.on('gameOver', (data) => { if (typeof Game !== 'undefined') Game.networkGameOver(data.winner); });
+        socket.on('rewardCoins', (data) => { 
+            if (myRole === data.winner && typeof Game !== 'undefined') {
+                Game.addCoins(5);
+            }
+        });
         socket.on('opponentDisconnected', () => { if (typeof Game !== 'undefined') Game.networkDisconnect(); });
     }
 
@@ -181,6 +204,7 @@ const Net = (() => {
         syncState: (data) => { if (socket && myRole) socket.emit('syncPlayer', data); },
         emitDotCollected: (row, col) => { if (socket && myRole === 'INNOCENT') socket.emit('collectDot', { row, col }); },
         emitGrowl: () => { if (socket && myRole === 'KILLER') socket.emit('killerGrowl'); },
+        emitDash: (data) => { if (socket && myRole === 'KILLER') socket.emit('dashUsed', data); },
         emitCaught: () => { if (socket && myRole === 'KILLER') socket.emit('playerCaught'); },
         emitIAmCaught: () => { if (socket && myRole === 'INNOCENT') socket.emit('playerCaught'); },
         emitKillerEaten: (data) => { if (socket && myRole) socket.emit('killerEaten', data); },

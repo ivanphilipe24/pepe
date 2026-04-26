@@ -10,11 +10,16 @@
 
     <!-- Main Menu -->
     <div id="menu" class="screen">
+        <!-- Coin Display -->
+        <div id="coin-display" style="position: absolute; top: 20px; right: 20px; font-family: var(--font-title); font-size: 2rem; color: #FFD700; text-shadow: 0 0 10px #FFD700;">
+            🪙 <span id="coin-count">0</span>
+        </div>
         <div class="menu-content">
             <h1 class="title">ANTIGRAVITY</h1>
             <p class="subtitle">O labirinto escureceu.<br>O caçador virou a presa.</p>
             <button id="play-btn">[ INICIAR 1 JOGADOR ]</button>
             <button id="mp-menu-btn" style="margin-top: 15px; border-color: #00FFFF; color: #00FFFF;">[ MULTIPLAYER ]</button>
+            <button id="shop-btn" style="margin-top: 15px; border-color: #FFD700; color: #FFD700;">[ LOJA DE SKINS ]</button>
             
             <!-- SUB-MENU MULTIPLAYER -->
             <div id="mp-submenu" style="display: none; margin-top: 25px; flex-direction: column; gap: 15px; align-items: center;">
@@ -27,6 +32,11 @@
             <div id="create-room-ui" style="display: none; margin-top: 25px; flex-direction: column; gap: 15px; align-items: center;">
                 <input type="text" id="create-name" placeholder="SEU NOME" maxlength="16" class="mp-input">
                 <input type="password" id="create-pass" placeholder="SENHA DA SALA" maxlength="8" class="mp-input">
+                <select id="create-killer-class" class="mp-input" style="background: rgba(0,0,0,0.8); color: #fff; text-align: center;">
+                    <option value="STALKER">STALKER (FANTASMA)</option>
+                    <option value="GLITCHER">GLITCHER (SALTADOR)</option>
+                    <option value="BANSHEE">BANSHEE (CAÇADOR)</option>
+                </select>
                 <button id="confirm-create-btn">[ CONFIRMAR E CRIAR ]</button>
                 <button class="mp-cancel-btn">[ CANCELAR ]</button>
             </div>
@@ -42,6 +52,11 @@
                 <div id="join-room-auth" style="display: none; flex-direction: column; gap: 10px; margin-top: 10px; border-top: 1px solid #333; padding-top: 15px; width: 320px;">
                     <input type="text" id="join-name" placeholder="SEU NOME" maxlength="16" class="mp-input">
                     <input type="password" id="join-pass" placeholder="SENHA" maxlength="8" class="mp-input">
+                    <select id="join-killer-class" class="mp-input" style="background: rgba(0,0,0,0.8); color: #fff; text-align: center;">
+                        <option value="STALKER">STALKER (FANTASMA)</option>
+                        <option value="GLITCHER">GLITCHER (SALTADOR)</option>
+                        <option value="BANSHEE">BANSHEE (CAÇADOR)</option>
+                    </select>
                     <button id="confirm-join-btn">[ ENTRAR ]</button>
                 </div>
                 <button class="mp-cancel-btn">[ CANCELAR ]</button>
@@ -67,9 +82,76 @@
         <div class="menu-static"></div>
     </div>
 
+    <!-- Shop Overlay -->
+    <div id="shop-ui" class="screen" style="display: none; background: rgba(0, 0, 0, 0.95); z-index: 200;">
+        <div class="overlay-content" style="width: 80%; max-width: 600px;">
+            <h2 style="color: #FFD700; font-family: var(--font-title); font-size: 3rem; margin-bottom: 20px;">LOJA DE SKINS</h2>
+            <div style="color: #FFD700; font-size: 1.5rem; margin-bottom: 20px; font-family: var(--font-title);">SALDO: 🪙 <span id="shop-coin-count">0</span></div>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px; max-height: 50vh; overflow-y: auto; padding-right: 10px;">
+                <!-- Skin 1 -->
+                <div class="shop-item" data-id="skin_observer" data-price="25" data-type="innocent">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="text-align: left;">
+                            <h3 style="color: #888; margin: 0; font-family: var(--font-title); font-size: 1.8rem;">O OBSERVADOR</h3>
+                            <p style="color: #666; font-size: 0.9rem; margin-top: 5px;">Inocente cinza com olhos brancos que tudo veem.</p>
+                        </div>
+                        <button class="shop-buy-btn" style="font-size: 1rem; padding: 5px 10px; border-color: #FFD700; color: #FFD700;">🪙 25</button>
+                    </div>
+                </div>
+
+                <!-- Skin 2 -->
+                <div class="shop-item" data-id="skin_blood_shadow" data-price="30" data-type="killer">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="text-align: left;">
+                            <h3 style="color: #FF0000; margin: 0; font-family: var(--font-title); font-size: 1.8rem;">SOMBRA DE SANGUE</h3>
+                            <p style="color: #884444; font-size: 0.9rem; margin-top: 5px;">Assassino vermelho pulsante.</p>
+                        </div>
+                        <button class="shop-buy-btn" style="font-size: 1rem; padding: 5px 10px; border-color: #FFD700; color: #FFD700;">🪙 30</button>
+                    </div>
+                </div>
+
+                <!-- Skin 3 -->
+                <div class="shop-item" data-id="skin_toxic_glitch" data-price="45" data-type="innocent">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="text-align: left;">
+                            <h3 style="color: #00FF00; margin: 0; font-family: var(--font-title); font-size: 1.8rem;">TOXIC GLITCH</h3>
+                            <p style="color: #448844; font-size: 0.9rem; margin-top: 5px;">Inocente Neon verde corrosivo.</p>
+                        </div>
+                        <button class="shop-buy-btn" style="font-size: 1rem; padding: 5px 10px; border-color: #FFD700; color: #FFD700;">🪙 45</button>
+                    </div>
+                </div>
+
+                <!-- Skin 4 -->
+                <div class="shop-item" data-id="skin_void" data-price="60" data-type="killer">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="text-align: left;">
+                            <h3 style="color: #444; margin: 0; font-family: var(--font-title); font-size: 1.8rem;">VAZIO</h3>
+                            <p style="color: #333; font-size: 0.9rem; margin-top: 5px;">Assassino Black. Stealth absoluto.</p>
+                        </div>
+                        <button class="shop-buy-btn" style="font-size: 1rem; padding: 5px 10px; border-color: #FFD700; color: #FFD700;">🪙 60</button>
+                    </div>
+                </div>
+
+                <!-- Skin 5 -->
+                <div class="shop-item" data-id="skin_phantom_gold" data-price="100" data-type="killer">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="text-align: left;">
+                            <h3 style="color: #FFD700; margin: 0; font-family: var(--font-title); font-size: 1.8rem;">OURO FANTASMA</h3>
+                            <p style="color: #AA8800; font-size: 0.9rem; margin-top: 5px;">Assassino Gold brilhante.</p>
+                        </div>
+                        <button class="shop-buy-btn" style="font-size: 1rem; padding: 5px 10px; border-color: #FFD700; color: #FFD700;">🪙 100</button>
+                    </div>
+                </div>
+            </div>
+
+            <button id="shop-close-btn" style="margin-top: 30px; font-size: 1.2rem; border-color: #444; color: #888;">[ VOLTAR ]</button>
+        </div>
+    </div>
+
     <!-- Interface In-Game / Overlays -->
     <div id="score-wrap" style="display:none;">
-        FASE: <span id="phase">1</span>/6 | MEMÓRIAS: <span id="dots-left">---</span> | PONTOS: <span id="score">0</span>
+        FASE: <span id="phase">1</span>/6 | MEMÓRIAS: <span id="dots-left">---</span> | PONTOS: <span id="score">0</span> | SANIDADE: <span id="sanity-ui" style="color: #00FFFF;">100</span>% <span id="mic-icon" style="transition: color 0.2s; filter: grayscale(100%);">🎤</span>
     </div>
 
     <div id="overlay" class="screen" style="display:none;">
@@ -95,6 +177,12 @@
             <button id="resume-btn">[ CONTINUAR ]</button>
             <button id="restart-btn" style="margin-top: 20px; font-size: 1.2rem; border-color: #444; color: #888;">[ REINICIAR ]</button>
         </div>
+    </div>
+
+    <!-- Mobile Ability Buttons (Visible only to Assassin on Mobile) -->
+    <div id="mobile-abilities" style="display:none; position: fixed; bottom: 20px; right: 20px; z-index: 100; flex-direction: column; gap: 15px;">
+        <button id="mobile-dash-btn" style="display:none; width: 60px; height: 60px; border-radius: 50%; background: rgba(0,255,255,0.2); border: 2px solid #00FFFF; color: #00FFFF; font-size: 10px;">DASH</button>
+        <button id="mobile-growl-btn" style="width: 60px; height: 60px; border-radius: 50%; background: rgba(255,0,0,0.2); border: 2px solid #FF0000; color: #FF0000; font-size: 10px;">ROSNAR</button>
     </div>
 
     <!-- Admin Panel Overlay -->
@@ -124,6 +212,17 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; width: 320px; margin: 0 auto;">
                     <span>VELOCIDADE (2x):</span>
                     <button id="admin-speed-btn" class="admin-btn" onclick="Game.adminToggle('speed')">OFF</button>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 320px; margin: 0 auto;">
+                    <span>MODO SILÊNCIO:</span>
+                    <button id="admin-silence-btn" class="admin-btn" onclick="Game.adminToggle('silence')">OFF</button>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 320px; margin: 0 auto;">
+                    <span>INSANIDADE INFINITA:</span>
+                    <button id="admin-insanity-btn" class="admin-btn" onclick="Game.adminToggle('insanity')">OFF</button>
+                </div>
+                <div style="margin-top: 10px;">
+                    <button class="admin-btn" style="width: 320px; border-color: #FFD700; color: #FFD700;" onclick="Game.addCoins(1000)">GANHAR 1000 MOEDAS</button>
                 </div>
             </div>
             <button id="admin-close-btn" style="border-color: #00FF00; color: #00FF00; margin-top: 20px; font-size: 1.2rem; font-family: 'Share Tech Mono', monospace;">[ VOLTAR ]</button>

@@ -33,12 +33,19 @@ io.on('connection', (socket) => {
     });
 
     socket.on('createRoom', (data) => {
-        const { playerName, password } = data;
+        const { playerName, password, killerClass, killerSkin, innocentSkin } = data;
         if (!playerName) return socket.emit('errorMsg', 'Nome é obrigatório.');
 
         const code = Math.floor(1000 + Math.random() * 9000).toString();
         rooms[code] = {
-            players: [{ id: socket.id, name: playerName, role: null }],
+            players: [{ 
+                id: socket.id, 
+                name: playerName, 
+                role: null, 
+                killerClass: killerClass || 'STALKER',
+                killerSkin: killerSkin || null,
+                innocentSkin: innocentSkin || null
+            }],
             password: password || '', // Opcional
             gameState: 'LOBBY',
             isPowerActive: false
@@ -50,7 +57,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('joinRoom', (data) => {
-        const { code, playerName, password } = data;
+        const { code, playerName, password, killerClass, killerSkin, innocentSkin } = data;
         const room = rooms[code];
 
         if (!room) {
@@ -66,7 +73,14 @@ io.on('connection', (socket) => {
             return socket.emit('errorMsg', 'Senha incorreta.');
         }
 
-        room.players.push({ id: socket.id, name: playerName || 'JOGADOR 2', role: null });
+        room.players.push({ 
+            id: socket.id, 
+            name: playerName || 'JOGADOR 2', 
+            role: null, 
+            killerClass: killerClass || 'STALKER',
+            killerSkin: killerSkin || null,
+            innocentSkin: innocentSkin || null
+        });
         socket.join(code);
 
         // Início do jogo
@@ -74,17 +88,26 @@ io.on('connection', (socket) => {
         room.players[0].role = isFirstKiller ? 'KILLER' : 'INNOCENT';
         room.players[1].role = isFirstKiller ? 'INNOCENT' : 'KILLER';
         room.gameState = 'PLAYING';
+        
+        const killerIdx = isFirstKiller ? 0 : 1;
+        room.activeKillerClass = room.players[killerIdx].killerClass;
 
         console.log(`Jogador [${playerName}] entrou na sala [${code}]. Iniciando jogo...`);
 
         io.to(room.players[0].id).emit('gameStart', {
             role: room.players[0].role,
             opponentName: room.players[1].name,
+            killerClass: room.activeKillerClass,
+            opponentKillerSkin: room.players[1].killerSkin,
+            opponentInnocentSkin: room.players[1].innocentSkin,
             level: 0
         });
         io.to(room.players[1].id).emit('gameStart', {
             role: room.players[1].role,
             opponentName: room.players[0].name,
+            killerClass: room.activeKillerClass,
+            opponentKillerSkin: room.players[0].killerSkin,
+            opponentInnocentSkin: room.players[0].innocentSkin,
             level: 0
         });
     });
@@ -108,6 +131,13 @@ io.on('connection', (socket) => {
         const roomCode = Array.from(socket.rooms).find(r => r !== socket.id);
         if(roomCode){
             socket.to(roomCode).emit('growlEffect');
+        }
+    });
+
+    socket.on('dashUsed', (data) => {
+        const roomCode = Array.from(socket.rooms).find(r => r !== socket.id);
+        if(roomCode){
+            socket.to(roomCode).emit('dashEffect', data);
         }
     });
 
@@ -144,6 +174,7 @@ io.on('connection', (socket) => {
             if (room.isPowerActive || room.powerTimer) return; 
             
             io.to(roomCode).emit('gameOver', { winner: 'KILLER' });
+            io.to(roomCode).emit('rewardCoins', { winner: 'KILLER' });
             room.gameState = 'LOBBY';
         }
     });
@@ -152,6 +183,7 @@ io.on('connection', (socket) => {
         const roomCode = Array.from(socket.rooms).find(r => r !== socket.id);
         if(roomCode){
             io.to(roomCode).emit('gameOver', { winner: 'INNOCENT' });
+            io.to(roomCode).emit('rewardCoins', { winner: 'INNOCENT' });
             if(rooms[roomCode]) rooms[roomCode].gameState = 'LOBBY';
         }
     });

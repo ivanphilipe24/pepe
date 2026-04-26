@@ -11,15 +11,31 @@ const Game = (() => {
   let isMultiplayer = false;
   let myRole = null;
   let growlCooldown = 0;
+  let dashCooldown = 0;
   let powerTimer = null; // Para modo Single Player
   let score = 0; // Pontuação global
+  
+  // Economy & Skins
+  let coins = 0;
+  let ownedSkins = [];
+  window.activeKillerSkin = null;
+  window.activeInnocentSkin = null;
+  
+  let stalkerInLightTimer = 0;
+  window.isStalkerRevealed = false;
   
   let adminClicks = 0;
   window.AdminState = {
       godMode: false,
       revealMap: false,
-      speedMult: 1.0
+      speedMult: 1.0,
+      silenceMode: false,
+      insanityInf: false
   };
+  
+  let sanity = 100;
+  let ghosts = []; // {x, y, timer, maxTimer, alpha}
+  let micThreshold = 50; // Threshold para captar barulho
   
   const LEVEL_NAMES = [
     "Nível 1: O Eco",
@@ -50,6 +66,9 @@ const Game = (() => {
     Player.init(); // just bindings
     if(typeof Net !== 'undefined') Net.init();
     
+    loadEconomy();
+    updateShopUI();
+    
     uiPlayBtn.addEventListener('click', () => {
       isMultiplayer = false;
       Audio.resume();
@@ -60,14 +79,15 @@ const Game = (() => {
     // Multiplayer UI bindings are initialized inside socket.js _setupUI()
     window.addEventListener('keydown', (e) => {
         if(e.code === 'Space' && isMultiplayer && myRole === 'KILLER' && state === 'PLAY') {
-            if(growlCooldown <= 0) {
-                Net.emitGrowl();
-                growlCooldown = 15; // 15s cooldown
-                // Audios or visual cue locally
-                document.getElementById('score-wrap').textContent = "ROSNADO ATIVADO (Recarga: 15s)";
-            }
+            doGrowl();
+        }
+        if((e.code === 'ShiftLeft' || e.code === 'ShiftRight') && isMultiplayer && myRole === 'KILLER' && state === 'PLAY') {
+            doDash();
         }
     });
+
+    document.getElementById('mobile-growl-btn').addEventListener('touchstart', (e) => { e.preventDefault(); doGrowl(); });
+    document.getElementById('mobile-dash-btn').addEventListener('touchstart', (e) => { e.preventDefault(); doDash(); });
 
     // Pause UI bindings
     document.getElementById('pause-btn').addEventListener('click', togglePause);
@@ -81,6 +101,50 @@ const Game = (() => {
         if(e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
             if(state === 'PLAY' || state === 'PAUSED') togglePause();
         }
+    });
+
+    // Shop UI Bindings
+    document.getElementById('shop-btn').addEventListener('click', () => {
+        updateShopUI();
+        document.getElementById('shop-ui').style.display = 'flex';
+        Audio.click();
+    });
+    document.getElementById('shop-close-btn').addEventListener('click', () => {
+        document.getElementById('shop-ui').style.display = 'none';
+        Audio.click();
+    });
+
+    // Setup Buy/Equip buttons
+    document.querySelectorAll('.shop-buy-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const itemDiv = e.target.closest('.shop-item');
+            const skinId = itemDiv.dataset.id;
+            const price = parseInt(itemDiv.dataset.price);
+            const type = itemDiv.dataset.type; // killer or innocent
+
+            const isAdmin = document.getElementById('admin-panel').style.display === 'flex';
+
+            if(ownedSkins.includes(skinId) || isAdmin) {
+                // Equip
+                if(type === 'killer') window.activeKillerSkin = skinId;
+                else window.activeInnocentSkin = skinId;
+                saveEconomy();
+                updateShopUI();
+                Audio.click();
+            } else {
+                // Buy
+                if(coins >= price) {
+                    coins -= price;
+                    ownedSkins.push(skinId);
+                    saveEconomy();
+                    updateShopUI();
+                    Audio.playCollect(); // Cash sound
+                } else {
+                    // Not enough coins
+                    alert('Moedas insuficientes!');
+                }
+            }
+        });
     });
 
     setupSwipeControls();
@@ -205,10 +269,18 @@ const Game = (() => {
       lastTime = performance.now();
       Audio.startDrone();
       
-      // Delay before Pac-Man wakes up
       setTimeout(() => { 
         if(state==='PLAY') Entity.activate(); 
       }, 3000 - level*300);
+
+      // Iniciar microfone e resetar sanidade
+      if(!isMultiplayer) {
+          Audio.initMic();
+          sanity = 100;
+          ghosts = [];
+          const sanityUi = document.getElementById('sanity-ui');
+          if(sanityUi) sanityUi.textContent = sanity;
+      }
 
       animId = requestAnimationFrame(gameLoop);
     }, 3000);
@@ -236,6 +308,15 @@ const Game = (() => {
     Object.keys(document.body.style).forEach(k => document.body.style[k]='');
     document.body.className = '';
 
+    if (role === 'KILLER') {
+        document.getElementById('mobile-abilities').style.display = 'flex';
+        document.getElementById('mobile-dash-btn').style.display = window.activeKillerClass === 'GLITCHER' ? 'block' : 'none';
+    } else {
+        document.getElementById('mobile-abilities').style.display = 'none';
+        Audio.initMic();
+        sanity = 100; // Reset sanity for Innocent in MP
+    }
+
     setTimeout(() => {
       uiOverlay.style.display = 'none';
       state = 'PLAY';
@@ -253,10 +334,18 @@ const Game = (() => {
     lastTime = now;
 
     if(growlCooldown > 0) growlCooldown -= dt;
+    if(dashCooldown > 0) dashCooldown -= dt;
 
     if(isMultiplayer && myRole === 'KILLER') {
-      if(growlCooldown > 0) document.getElementById('score-wrap').textContent = `RECARGA DO ROSNADO: ${Math.ceil(growlCooldown)}s`;
-      else document.getElementById('score-wrap').textContent = `ESPAÇO: ROSNAR (DESORIENTAR)`;
+      let uiText = "";
+      if(growlCooldown > 0) uiText += `ROSNADO: ${Math.ceil(growlCooldown)}s `;
+      else uiText += `ESPAÇO: ROSNAR `;
+      
+      if(window.activeKillerClass === 'GLITCHER') {
+          if(dashCooldown > 0) uiText += `| DASH: ${Math.ceil(dashCooldown)}s`;
+          else uiText += `| SHIFT: DASH`;
+      }
+      document.getElementById('score-wrap').textContent = uiText;
     }
 
     const isLabirintoSangue = (level === 4);
@@ -298,10 +387,85 @@ const Game = (() => {
         }
         const pPos = Player.getPos();
         Entity.update(dt, pPos.row, pPos.col);
+
+        // --- SISTEMA DE TERROR PSICOLÓGICO ---
+        // 1. Sanidade cai se no escuro
+        if(window.AdminState.insanityInf) {
+            sanity = 0;
+        } else {
+            if(Player.getFlicker() < 0.5) {
+                sanity = Math.max(0, sanity - dt * 2); // Cai 2 por segundo no escuro total (ou piscando)
+            } else {
+                sanity = Math.min(100, sanity + dt * 0.5); // Recupera lentamente na luz
+            }
+        }
+        
+        const sanityUi = document.getElementById('sanity-ui');
+        if(sanityUi) {
+            sanityUi.textContent = Math.floor(sanity);
+            sanityUi.style.color = sanity < 30 ? '#FF0000' : '#00FFFF';
+        }
+
+        const cvs = document.getElementById('game-canvas');
+        if(sanity < 30) {
+            // Crise de Pânico
+            if(Math.random() < 0.05) {
+                cvs.style.filter = Math.random() > 0.5 ? "invert(1)" : "hue-rotate(90deg)";
+            } else {
+                cvs.style.filter = window.isPowerModeActive ? "hue-rotate(180deg) brightness(1.2)" : "none";
+            }
+            
+            // Spawn de Fantasmas Aleatórios
+            if(Math.random() < 0.01 && ghosts.length < 3) {
+                const spawnTile = GameMap.randomOpenTile(pPos.row, pPos.col, 5); // Perto do player
+                if(spawnTile) {
+                    ghosts.push({
+                        x: spawnTile.c * GameMap.TILE + GameMap.TILE/2,
+                        y: spawnTile.r * GameMap.TILE + GameMap.TILE/2,
+                        timer: 2.0, // Fica vivo por 2 segs
+                        maxTimer: 2.0,
+                        alpha: 0
+                    });
+                }
+            }
+        } else if(!isAntigravity) {
+            cvs.style.filter = window.isPowerModeActive ? "hue-rotate(180deg) brightness(1.2)" : "none";
+        }
+
+        // Atualiza Fantasmas
+        for(let i = ghosts.length - 1; i >= 0; i--) {
+            let g = ghosts[i];
+            g.timer -= dt;
+            const distToPlayer = Math.sqrt((pPos.x - g.x)**2 + (pPos.y - g.y)**2);
+            if(g.timer <= 0 || distToPlayer < GameMap.TILE * 1.5) {
+                ghosts.splice(i, 1); // Some se o tempo acabar ou o jogador chegar perto
+            } else {
+                // Fade in/out
+                if(g.timer > g.maxTimer - 0.5) g.alpha = (g.maxTimer - g.timer) / 0.5;
+                else if(g.timer < 0.5) g.alpha = g.timer / 0.5;
+                else g.alpha = 1.0;
+            }
+        }
+
+        // 2. Microfone (The Silence)
+        if(Audio.getMicVolume && !window.AdminState.silenceMode) {
+            const vol = Audio.getMicVolume();
+            const micIcon = document.getElementById('mic-icon');
+            if(vol > micThreshold) {
+                if(micIcon) micIcon.style.color = '#FF0000';
+                Entity.forceHunting(pPos.row, pPos.col); // Assassino escuta e vai direto para o jogador
+            } else {
+                if(micIcon) micIcon.style.color = '#888888';
+            }
+        } else {
+            const micIcon = document.getElementById('mic-icon');
+            if(micIcon) micIcon.style.color = window.AdminState.silenceMode ? '#00FF00' : '#888888';
+        }
+        // -------------------------------------
     } else {
         // MULTIPLAYER
         if(myRole === 'INNOCENT') {
-            const pts = Player.update(dt, false);
+            const pts = Player.update(dt, true); // Permite flicker no Multiplayer para o Inocente
             if(pts){
                 score += pts * 10;
                 if(scoreEl) scoreEl.textContent = score;
@@ -319,21 +483,68 @@ const Game = (() => {
             const oppData = Net.getOpponentData();
             if(oppData && !Entity.isFrozen()) Entity.forcePos(oppData.x, oppData.y, oppData.row, oppData.col, oppData.dir, oppData.mouth);
             
+            // Atualiza e Sincroniza Sanidade
+            if(Player.getFlicker() < 0.5) sanity = Math.max(0, sanity - dt * 2);
+            else sanity = Math.min(100, sanity + dt * 0.5);
+            
+            const sanityUi = document.getElementById('sanity-ui');
+            if(sanityUi) {
+                sanityUi.textContent = Math.floor(sanity);
+                sanityUi.style.color = sanity < 30 ? '#FF0000' : '#00FFFF';
+            }
+
             // Send pos
             const p = Player.getPos();
-            Net.syncState({ x: p.x, y: p.y, row: p.row, col: p.col, dir: Player.getDir(), angle: Player.getAngle(), flicker: Player.getFlicker() });
+            Net.syncState({ x: p.x, y: p.y, row: p.row, col: p.col, dir: Player.getDir(), angle: Player.getAngle(), flicker: Player.getFlicker(), sanity: sanity });
             
         } else if (myRole === 'KILLER') {
             // Assassino controlando Entity
             Entity.updateManual(dt);
             const oppData = Net.getOpponentData();
-            if(oppData) Player.forcePos(oppData.x, oppData.y, oppData.row, oppData.col, oppData.dir, oppData.angle, oppData.flicker);
+            if(oppData) {
+                Player.forcePos(oppData.x, oppData.y, oppData.row, oppData.col, oppData.dir, oppData.angle, oppData.flicker);
+                if(oppData.sanity !== undefined) window.opponentSanity = oppData.sanity;
+            }
             
             Entity.animateMouth(dt);
             // Send pos
             const ep = Entity.getPos();
             Net.syncState({ x: ep.x, y: ep.y, row: ep.row, col: ep.col, dir: Entity.getDir(), mouth: Entity.getMouth() });
         }
+    }
+
+    // Stalker Visibility Logic (Innocent only)
+    if(isMultiplayer && myRole === 'INNOCENT' && window.activeKillerClass === 'STALKER' && Entity.isActive()) {
+        const pPos = Player.getPos(), ePos = Entity.getPos();
+        const dx = ePos.x - pPos.x, dy = ePos.y - pPos.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const flicker = Player.getFlicker();
+        const lightDist = 24 * 6 * flicker; // TILE * 6
+        
+        let inLight = false;
+        if(dist <= lightDist && flicker > 0) {
+            let angleBase = 0;
+            const pDir = Player.getDir();
+            if(pDir.name==='right') angleBase = 0;
+            else if(pDir.name==='down')  angleBase = Math.PI/2;
+            else if(pDir.name==='left')  angleBase = Math.PI;
+            else if(pDir.name==='up')    angleBase = -Math.PI/2;
+            angleBase += Player.getAngle();
+            
+            let angleToE = Math.atan2(dy, dx);
+            let diff = angleToE - angleBase;
+            while(diff <= -Math.PI) diff += Math.PI*2;
+            while(diff > Math.PI) diff -= Math.PI*2;
+            
+            if(Math.abs(diff) <= (Math.PI / 3.5) / 2) {
+                inLight = true;
+            }
+        }
+        
+        if(inLight) stalkerInLightTimer += dt;
+        else stalkerInLightTimer = 0;
+        
+        window.isStalkerRevealed = (stalkerInLightTimer >= 2.0);
     }
 
     // Prox logic and Death collision
@@ -404,7 +615,7 @@ const Game = (() => {
     }
 
     // 2. Render
-    Renderer.renderAll(dt, Player, Entity, GameMap.getMap(), level, proximity, isMultiplayer ? myRole : null, window.isPowerModeActive);
+    Renderer.renderAll(dt, Player, Entity, GameMap.getMap(), level, proximity, isMultiplayer ? myRole : null, window.isPowerModeActive, ghosts);
 
     animId = requestAnimationFrame(gameLoop);
   }
@@ -469,6 +680,33 @@ const Game = (() => {
     uiPlayBtn.textContent = "DESPERTAR NOVAMENTE";
   }
 
+  function doGrowl() {
+      if(growlCooldown <= 0) {
+          Net.emitGrowl();
+          growlCooldown = 15;
+      }
+  }
+
+  function doDash() {
+      if(window.activeKillerClass === 'GLITCHER' && dashCooldown <= 0) {
+          const dashPos = Entity.calculateDash(4); // 4 blocos
+          if (dashPos) {
+              Entity.forcePos(dashPos.x, dashPos.y, dashPos.r, dashPos.c);
+              Net.emitDash({ r: dashPos.r, c: dashPos.c, x: dashPos.x, y: dashPos.y });
+              dashCooldown = 5; // 5 segundos
+              Audio.playCollect(); // Efeito temporário
+          }
+      }
+  }
+
+  function triggerDashEffect(data) {
+      if(state !== 'PLAY') return;
+      if(typeof Entity !== 'undefined') {
+          Entity.forcePos(data.x, data.y, data.r, data.c);
+          Entity.freeze(200); // pequeno freeze visual no oponente
+      }
+  }
+
   function triggerGrowlEffect() {
       if(state !== 'PLAY') return;
       Audio.playDeath(); // Som agudo/monstruoso
@@ -476,6 +714,11 @@ const Game = (() => {
       setTimeout(() => {
           document.body.classList.remove('flipped');
       }, 4000);
+      
+      // Banshee Heartbeat Vibration
+      if(window.activeKillerClass === 'BANSHEE' && isMultiplayer && myRole === 'INNOCENT' && navigator.vibrate) {
+          navigator.vibrate([200, 100, 200, 500, 200, 100, 200]);
+      }
   }
 
   function networkGameOver(winnerStr) {
@@ -559,9 +802,11 @@ const Game = (() => {
       const panel = document.getElementById('admin-panel');
       if(panel.style.display === 'none') {
           panel.style.display = 'flex';
+          updateShopUI(); // Refresh shop prices to show "GRÁTIS"
           Audio.click();
       } else {
           panel.style.display = 'none';
+          updateShopUI(); // Refresh shop prices back to normal
       }
   }
 
@@ -587,10 +832,73 @@ const Game = (() => {
           document.getElementById('admin-speed-btn').textContent = AdminState.speedMult > 1.0 ? 'ON' : 'OFF';
           document.getElementById('admin-speed-btn').classList.toggle('active', AdminState.speedMult > 1.0);
       }
+      if(feature === 'silence') {
+          AdminState.silenceMode = !AdminState.silenceMode;
+          document.getElementById('admin-silence-btn').textContent = AdminState.silenceMode ? 'ON' : 'OFF';
+          document.getElementById('admin-silence-btn').classList.toggle('active', AdminState.silenceMode);
+      }
+      if(feature === 'insanity') {
+          AdminState.insanityInf = !AdminState.insanityInf;
+          document.getElementById('admin-insanity-btn').textContent = AdminState.insanityInf ? 'ON' : 'OFF';
+          document.getElementById('admin-insanity-btn').classList.toggle('active', AdminState.insanityInf);
+      }
       Audio.click();
   }
 
-  return { init, startMultiplayer, triggerGrowlEffect, networkGameOver, networkDisconnect, setPowerMode, activatePowerMode, handleKillerEaten, adminJump, adminToggle };
+  // --- ECONOMY ---
+  function loadEconomy() {
+      const savedCoins = localStorage.getItem('ag_coins');
+      if(savedCoins !== null) coins = parseInt(savedCoins);
+      
+      const savedSkins = localStorage.getItem('ag_skins');
+      if(savedSkins !== null) ownedSkins = JSON.parse(savedSkins);
+      
+      window.activeKillerSkin = localStorage.getItem('ag_active_killer_skin') || null;
+      window.activeInnocentSkin = localStorage.getItem('ag_active_innocent_skin') || null;
+      
+      document.getElementById('coin-count').textContent = coins;
+  }
+
+  function saveEconomy() {
+      localStorage.setItem('ag_coins', coins);
+      localStorage.setItem('ag_skins', JSON.stringify(ownedSkins));
+      if(window.activeKillerSkin) localStorage.setItem('ag_active_killer_skin', window.activeKillerSkin);
+      if(window.activeInnocentSkin) localStorage.setItem('ag_active_innocent_skin', window.activeInnocentSkin);
+      
+      document.getElementById('coin-count').textContent = coins;
+  }
+
+  function addCoins(amount) {
+      coins += amount;
+      saveEconomy();
+  }
+
+  function updateShopUI() {
+      const isAdmin = document.getElementById('admin-panel').style.display === 'flex';
+      document.getElementById('shop-coin-count').textContent = coins;
+      document.querySelectorAll('.shop-item').forEach(item => {
+          const btn = item.querySelector('.shop-buy-btn');
+          const skinId = item.dataset.id;
+          const type = item.dataset.type;
+          
+          btn.classList.remove('owned', 'equipped');
+          if(ownedSkins.includes(skinId) || isAdmin) {
+              const isActive = (type === 'killer' && window.activeKillerSkin === skinId) || 
+                               (type === 'innocent' && window.activeInnocentSkin === skinId);
+              if(isActive) {
+                  btn.textContent = "[ EQUIPADO ]";
+                  btn.classList.add('equipped');
+              } else {
+                  btn.textContent = "[ EQUIPAR ]";
+                  btn.classList.add('owned');
+              }
+          } else {
+              btn.textContent = "🪙 " + item.dataset.price;
+          }
+      });
+  }
+
+  return { init, startMultiplayer, triggerGrowlEffect, triggerDashEffect, networkGameOver, networkDisconnect, setPowerMode, activatePowerMode, handleKillerEaten, adminJump, adminToggle, addCoins };
 })();
 
 window.onload = Game.init;

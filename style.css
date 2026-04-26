@@ -292,3 +292,91 @@ button:hover {
   box-shadow: 0 0 10px #00FF00;
 }
 
+/* Mobile Ability Buttons */
+#mobile-abilities {
+  display: none;
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  z-index: 1000;
+  flex-direction: column;
+  gap: 20px;
+}
+
+#mobile-abilities button {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  border: 3px solid;
+  font-family: var(--font-title);
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(5px);
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+  touch-action: manipulation;
+  transition: transform 0.1s, background 0.1s;
+}
+
+#mobile-abilities button:active {
+  transform: scale(0.9);
+}
+
+#mobile-dash-btn {
+  border-color: #00FFFF !important;
+  color: #00FFFF !important;
+}
+
+#mobile-growl-btn {
+  border-color: #FF4444 !important;
+  color: #FF4444 !important;
+}
+
+@media (max-width: 800px) {
+  #mobile-abilities {
+    bottom: 20px;
+    right: 20px;
+  }
+  #mobile-abilities button {
+    width: 60px;
+    height: 60px;
+    font-size: 1rem;
+  }
+}
+
+/* Shop UI Styles */
+.shop-item {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #333;
+    padding: 15px;
+    transition: all 0.2s;
+}
+
+.shop-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #555;
+}
+
+.shop-buy-btn {
+    background: rgba(255, 215, 0, 0.1);
+    cursor: pointer;
+}
+
+.shop-buy-btn:hover {
+    background: rgba(255, 215, 0, 0.3);
+    transform: scale(1.05);
+}
+
+.shop-buy-btn.equipped {
+    background: #00FF00;
+    color: #000 !important;
+    border-color: #00FF00 !important;
+}
+
+.shop-buy-btn.owned {
+    background: rgba(255, 255, 255, 0.2);
+    color: #FFF !important;
+    border-color: #FFF !important;
+}
