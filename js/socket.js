@@ -5,11 +5,12 @@ const Net = (() => {
     let opponentData = null;
     let roomCode = null;
     
-    // URL do servidor (Altere para a URL do Render/Railway quando hospedar)
-    const SERVER_URL = "http://localhost:3000"; 
+    // URL do servidor (Dinâmica para funcionar local e remoto)
+    const SERVER_URL = window.location.origin; 
 
     function init() {
-        console.log("Tentando conectar ao servidor:", SERVER_URL);
+        // Silencioso
+        // console.log("Tentando conectar ao servidor:", SERVER_URL);
         
         try {
             socket = io(SERVER_URL, {
@@ -17,8 +18,8 @@ const Net = (() => {
                 timeout: 10000
             });
         } catch (e) {
-            console.error("Erro ao carregar Socket.io:", e);
-            _showError("Erro técnico: Biblioteca Socket.io não encontrada.");
+            // console.error("Erro ao carregar Socket.io:", e);
+            // _showError("Erro técnico: Biblioteca Socket.io não encontrada.");
             return;
         }
 
@@ -30,8 +31,7 @@ const Net = (() => {
         });
 
         socket.on('connect_error', () => {
-            console.warn("Ambiente GitHub Pages detectado ou Servidor Offline.");
-            _showError("Erro: Sem conexão com o servidor. Verifique se o servidor está online.");
+            // Silencioso se estiver offline
         });
 
         socket.on('roomCreated', (data) => {
@@ -198,9 +198,10 @@ const Net = (() => {
     }
 
     function _showError(msg) {
-        const errEl = document.getElementById('mp-error');
-        errEl.textContent = msg;
-        errEl.style.display = 'block';
+        // Desativado a pedido do usuário
+        // const errEl = document.getElementById('mp-error');
+        // errEl.textContent = msg;
+        // errEl.style.display = 'block';
     }
 
     // API Pública
