@@ -89,6 +89,27 @@
             <div style="color: #FFD700; font-size: 1.5rem; margin-bottom: 20px; font-family: var(--font-title);">SALDO: 🪙 <span id="shop-coin-count">0</span></div>
             
             <div style="display: flex; flex-direction: column; gap: 15px; max-height: 50vh; overflow-y: auto; padding-right: 10px;">
+                <!-- Default Skins -->
+                <div class="shop-item" data-id="default_innocent" data-price="0" data-type="innocent">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="text-align: left;">
+                            <h3 style="color: #fff; margin: 0; font-family: var(--font-title); font-size: 1.8rem;">FANTASMA PADRÃO</h3>
+                            <p style="color: #888; font-size: 0.9rem; margin-top: 5px;">A aparência original do Inocente.</p>
+                        </div>
+                        <button class="shop-buy-btn" style="font-size: 1rem; padding: 5px 10px; border-color: #fff; color: #fff;">GRÁTIS</button>
+                    </div>
+                </div>
+
+                <div class="shop-item" data-id="default_killer" data-price="0" data-type="killer">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="text-align: left;">
+                            <h3 style="color: #fff; margin: 0; font-family: var(--font-title); font-size: 1.8rem;">ASSASSINO PADRÃO</h3>
+                            <p style="color: #888; font-size: 0.9rem; margin-top: 5px;">A aparência original do Pac-Man.</p>
+                        </div>
+                        <button class="shop-buy-btn" style="font-size: 1rem; padding: 5px 10px; border-color: #fff; color: #fff;">GRÁTIS</button>
+                    </div>
+                </div>
+
                 <!-- Skin 1 -->
                 <div class="shop-item" data-id="skin_observer" data-price="25" data-type="innocent">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -176,6 +197,7 @@
             <h2 class="title">PAUSADO</h2>
             <button id="resume-btn">[ CONTINUAR ]</button>
             <button id="restart-btn" style="margin-top: 20px; font-size: 1.2rem; border-color: #444; color: #888;">[ REINICIAR ]</button>
+            <button id="exit-btn" style="margin-top: 15px; font-size: 1.2rem; border-color: #FF4444; color: #FF4444;">[ SAIR DA PARTIDA ]</button>
         </div>
     </div>
 

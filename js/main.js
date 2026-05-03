@@ -97,6 +97,12 @@ const Game = (() => {
         startLevel();
     });
 
+    document.getElementById('exit-btn').addEventListener('click', () => {
+        if(confirm("Deseja realmente sair da partida?")) {
+            window.location.reload();
+        }
+    });
+
     window.addEventListener('keydown', (e) => {
         if(e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
             if(state === 'PLAY' || state === 'PAUSED') togglePause();
@@ -124,10 +130,11 @@ const Game = (() => {
 
             const isAdmin = document.getElementById('admin-panel').style.display === 'flex';
 
-            if(ownedSkins.includes(skinId) || isAdmin) {
+            if(ownedSkins.includes(skinId) || isAdmin || skinId.startsWith('default_')) {
                 // Equip
-                if(type === 'killer') window.activeKillerSkin = skinId;
-                else window.activeInnocentSkin = skinId;
+                if(type === 'killer') window.activeKillerSkin = skinId.startsWith('default_') ? null : skinId;
+                else window.activeInnocentSkin = skinId.startsWith('default_') ? null : skinId;
+                
                 saveEconomy();
                 updateShopUI();
                 Audio.click();
@@ -615,7 +622,7 @@ const Game = (() => {
     }
 
     // 2. Render
-    Renderer.renderAll(dt, Player, Entity, GameMap.getMap(), level, proximity, isMultiplayer ? myRole : null, window.isPowerModeActive, ghosts);
+    Renderer.renderAll(dt, Player, Entity, GameMap.getMap(), level, proximity, isMultiplayer ? myRole : 'INNOCENT', window.isPowerModeActive, ghosts);
 
     animId = requestAnimationFrame(gameLoop);
   }
@@ -862,8 +869,8 @@ const Game = (() => {
   function saveEconomy() {
       localStorage.setItem('ag_coins', coins);
       localStorage.setItem('ag_skins', JSON.stringify(ownedSkins));
-      if(window.activeKillerSkin) localStorage.setItem('ag_active_killer_skin', window.activeKillerSkin);
-      if(window.activeInnocentSkin) localStorage.setItem('ag_active_innocent_skin', window.activeInnocentSkin);
+      localStorage.setItem('ag_active_killer_skin', window.activeKillerSkin || "");
+      localStorage.setItem('ag_active_innocent_skin', window.activeInnocentSkin || "");
       
       document.getElementById('coin-count').textContent = coins;
   }
@@ -882,9 +889,11 @@ const Game = (() => {
           const type = item.dataset.type;
           
           btn.classList.remove('owned', 'equipped');
-          if(ownedSkins.includes(skinId) || isAdmin) {
-              const isActive = (type === 'killer' && window.activeKillerSkin === skinId) || 
-                               (type === 'innocent' && window.activeInnocentSkin === skinId);
+          const isDefault = skinId.startsWith('default_');
+          
+          if(ownedSkins.includes(skinId) || isAdmin || isDefault) {
+              const isActive = (type === 'killer' && window.activeKillerSkin === (isDefault ? null : skinId)) || 
+                               (type === 'innocent' && window.activeInnocentSkin === (isDefault ? null : skinId));
               if(isActive) {
                   btn.textContent = "[ EQUIPADO ]";
                   btn.classList.add('equipped');
