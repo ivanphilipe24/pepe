@@ -9,6 +9,7 @@ const Renderer = (() => {
   let TILE = 24;
   let isMobileDevice = false;
   let currentLevel = 0;
+  let glitchParticles = [];
 
   const COLORS = {
     wallLevel:   ['#0000AA', '#550000', '#222222', '#660000', '#880000', '#AA0000'],
@@ -255,11 +256,39 @@ const Renderer = (() => {
     }
 
     // 2. Player (Ghost)
-    _drawGhost(Player.getPos().x, Player.getPos().y, false, myRole);
+    _drawGhost(Player.getPos().x, Player.getPos().y, false, myRole, Player.getDir());
 
     // 3. Entity (Pac-Man)
     if(Entity.isActive()){
-      _drawEntity(Entity.getPos().x, Entity.getPos().y, Entity.getDir(), Entity.getMouth(), level, proximity, isPowerModeActive, myRole);
+      const killerSkin = (myRole === 'KILLER') ? window.activeKillerSkin : (window.opponentKillerSkin || window.activeKillerSkin);
+      const ePos = Entity.getPos();
+      
+      const innocentSkin = (myRole === 'INNOCENT') ? window.activeInnocentSkin : window.opponentInnocentSkin;
+      const pPos = Player.getPos();
+
+      // Partículas para quem estiver com a skin de Ladybug (Player ou Entity)
+      if(killerSkin === 'skin_ladybug_glitch') {
+          spawnGlitchParticles(ePos.x, ePos.y, Entity.getDir());
+      }
+      if(innocentSkin === 'skin_ladybug_glitch') {
+          spawnGlitchParticles(pPos.x, pPos.y, Player.getDir());
+      }
+
+      ctx.save();
+      for(let i = glitchParticles.length - 1; i >= 0; i--) {
+          let p = glitchParticles[i];
+          p.life -= dt * 2;
+          if(p.life <= 0) {
+              glitchParticles.splice(i, 1);
+          } else {
+              ctx.fillStyle = p.color;
+              ctx.globalAlpha = p.life > 1 ? 1 : p.life;
+              ctx.fillRect(p.x, p.y, 3 + Math.random()*2, 3 + Math.random()*2);
+          }
+      }
+      ctx.restore();
+
+      _drawEntity(ePos.x, ePos.y, Entity.getDir(), Entity.getMouth(), level, proximity, isPowerModeActive, myRole);
     }
 
     // 3.5 Fantasmas (Alucinações)
@@ -291,6 +320,24 @@ const Renderer = (() => {
 
 
 
+  function spawnGlitchParticles(x, y, dir) {
+      if(Math.random() < 0.2) {
+          let ang = 0;
+          if(dir.name==='right') ang=0;
+          if(dir.name==='down') ang=Math.PI/2;
+          if(dir.name==='left') ang=Math.PI;
+          if(dir.name==='up') ang=-Math.PI/2;
+          const mx = x + Math.cos(ang) * (TILE*0.5);
+          const my = y + Math.sin(ang) * (TILE*0.5);
+          glitchParticles.push({
+              x: mx + (Math.random()-0.5)*10,
+              y: my + (Math.random()-0.5)*10,
+              color: ['#00FFFF', '#FF00FF', '#FFFFFF', '#FF0000'][Math.floor(Math.random()*4)],
+              life: 1.5 + Math.random()
+          });
+      }
+  }
+
   function _drawEntity(x, y, dir, mouthPhase, level, proximity, isPowerModeActive, myRole){
     if (window.activeKillerClass === 'STALKER' && myRole === 'INNOCENT' && !window.isStalkerRevealed) {
         return; // Totalmente invisível até ser revelado
@@ -310,7 +357,13 @@ const Renderer = (() => {
     if(dir.name==='left') ang=Math.PI;
     if(dir.name==='up') ang=-Math.PI/2;
 
-    const m = 0.15 + 0.35 * mouthPhase; 
+    const killerSkin = (myRole === 'KILLER') ? window.activeKillerSkin : (window.opponentKillerSkin || window.activeKillerSkin);
+
+    let m = 0.15 + 0.35 * mouthPhase; 
+    if(killerSkin === 'skin_ladybug_glitch') {
+        // Boca oscila entre quase fechada e bem aberta (0 a 60 graus)
+        m = 0.18 * (Math.sin(Date.now() * 0.015) + 1.2); 
+    }
 
     ctx.save();
     ctx.translate(x + jitter, y + jitter);
@@ -318,7 +371,6 @@ const Renderer = (() => {
 
     // 1. Body Base
     const bodyGrad = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r);
-    const killerSkin = (myRole === 'KILLER') ? window.activeKillerSkin : window.opponentKillerSkin;
     
     if(!isPowerModeActive) {
         if(killerSkin === 'skin_blood_shadow') {
@@ -345,6 +397,9 @@ const Renderer = (() => {
             bodyGrad.addColorStop(0, '#FFFACD');
             bodyGrad.addColorStop(0.5, '#FFD700');
             bodyGrad.addColorStop(1, '#B8860B');
+        } else if(killerSkin === 'skin_ladybug_glitch') {
+            bodyGrad.addColorStop(0, '#FF5252');
+            bodyGrad.addColorStop(1, '#D32F2F');
         } else {
             // Default/Old skin_blood logic fallback
             bodyGrad.addColorStop(0, '#C0C040'); // Sickly core
@@ -366,13 +421,69 @@ const Renderer = (() => {
     ctx.fill();
 
     // 2. Veins/Gore on skin
-    ctx.strokeStyle = isPowerModeActive ? 'rgba(0, 255, 255, 0.4)' : 'rgba(100, 0, 0, 0.4)';
-    ctx.lineWidth = 1;
-    for(let i=0; i<3; i++) {
+    if(killerSkin !== 'skin_ladybug_glitch') {
+        ctx.strokeStyle = isPowerModeActive ? 'rgba(0, 255, 255, 0.4)' : 'rgba(100, 0, 0, 0.4)';
+        ctx.lineWidth = 1;
+        for(let i=0; i<3; i++) {
+            ctx.beginPath();
+            ctx.moveTo(-r*0.5, -r*0.2);
+            ctx.bezierCurveTo(-r*0.2, -r*0.8, r*0.2, -r*0.4, r*0.6, -r*0.7);
+            ctx.stroke();
+        }
+    } else {
+        ctx.fillStyle = '#111111';
+        const spots = [
+            {x: -r*0.4, y: -r*0.3, s: r*0.15},
+            {x: -r*0.6, y: 0, s: r*0.18},
+            {x: -r*0.4, y: r*0.3, s: r*0.15},
+            {x: -r*0.1, y: -r*0.55, s: r*0.12},
+            {x: -r*0.1, y: r*0.55, s: r*0.12}
+        ];
+        spots.forEach(sp => {
+            ctx.beginPath(); ctx.arc(sp.x, sp.y, sp.s, 0, Math.PI*2); ctx.fill();
+        });
+
+        // 2.2 Neon Aura (Super fuzzy e intensa)
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        ctx.strokeStyle = '#b026ff';
+        ctx.lineWidth = 6;
+        ctx.shadowColor = '#00ffff';
+        ctx.shadowBlur = 25; // Mais fuzzy
         ctx.beginPath();
-        ctx.moveTo(-r*0.5, -r*0.2);
-        ctx.bezierCurveTo(-r*0.2, -r*0.8, r*0.2, -r*0.4, r*0.6, -r*0.7);
+        ctx.arc(0, 0, r + 4, m * Math.PI, (2 - m) * Math.PI);
         ctx.stroke();
+        
+        // Brilho extra interno
+        ctx.strokeStyle = '#00ffff';
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 10;
+        ctx.stroke();
+        ctx.restore();
+
+        // 2.3 Antennas
+        ctx.strokeStyle = '#111111';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-r*0.2, -r*0.8);
+        ctx.lineTo(-r*0.5, -r*1.3);
+        ctx.moveTo(-r*0.2, r*0.8);
+        ctx.lineTo(-r*0.5, r*1.3);
+        ctx.stroke();
+
+        // Neon tips
+        ctx.fillStyle = '#ff0055';
+        ctx.shadowColor = '#ff0055';
+        ctx.shadowBlur = 20;
+        ctx.beginPath(); ctx.arc(-r*0.5, -r*1.3, r*0.15, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-r*0.5, r*1.3, r*0.15, 0, Math.PI*2); ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // 2.4 Glitch Scanlines (Barras horizontais rápidas)
+        if(Math.random() < 0.4) {
+            ctx.fillStyle = Math.random() > 0.5 ? 'rgba(0, 255, 255, 0.5)' : 'rgba(255, 0, 255, 0.5)';
+            ctx.fillRect(-r, (Math.random()-0.5)*r*2, r*2, 2);
+        }
     }
 
     // 3. Mouth Interior
@@ -430,14 +541,29 @@ const Renderer = (() => {
     let scleraColor = '#FFF0F0';
     if(killerSkin === 'skin_observer') scleraColor = '#FFFFFF';
     if(killerSkin === 'skin_phantom_gold') scleraColor = '#FFFFCC';
-    
-    ctx.fillStyle = scleraColor;
-    ctx.beginPath();
-    ctx.arc(eyeX, eyeY, eyeSize, 0, Math.PI * 2);
-    ctx.fill();
+    if(killerSkin === 'skin_ladybug_glitch') scleraColor = '#b026ff'; // Fundo roxo do olho
+
+    if(killerSkin === 'skin_ladybug_glitch') {
+        // Pixelated Eye Logic
+        const sz = eyeSize * 1.2;
+        ctx.fillStyle = '#b026ff';
+        ctx.fillRect(eyeX - sz/2, eyeY - sz/2, sz, sz);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(eyeX - sz/4, eyeY - sz/4, sz/2, sz/2);
+        // Glow pixel intenso
+        ctx.shadowColor = '#b026ff';
+        ctx.shadowBlur = 20;
+        ctx.fillRect(eyeX - sz/8, eyeY - sz/8, sz/4, sz/4);
+        ctx.shadowBlur = 0;
+    } else {
+        ctx.fillStyle = scleraColor;
+        ctx.beginPath();
+        ctx.arc(eyeX, eyeY, eyeSize, 0, Math.PI * 2);
+        ctx.fill();
+    }
     
     // Blood vessels in eye (Except for some skins)
-    if(killerSkin !== 'skin_phantom_gold' && killerSkin !== 'skin_void') {
+    if(killerSkin !== 'skin_phantom_gold' && killerSkin !== 'skin_void' && killerSkin !== 'skin_ladybug_glitch') {
         ctx.strokeStyle = killerSkin === 'skin_toxic_glitch' ? 'rgba(0, 200, 0, 0.6)' : 'rgba(200, 0, 0, 0.6)';
         ctx.lineWidth = 0.5;
         for(let i=0; i<6; i++) {
@@ -464,6 +590,7 @@ const Renderer = (() => {
     else if(killerSkin === 'skin_phantom_gold') glowColor = 'rgba(255, 215, 0, 0.8)';
     else if(killerSkin === 'skin_observer') glowColor = 'rgba(255, 255, 255, 0.9)';
     else if(killerSkin === 'skin_void') glowColor = 'rgba(50, 50, 50, 0.5)';
+    else if(killerSkin === 'skin_ladybug_glitch') glowColor = 'rgba(176, 38, 255, 0.8)';
     
     ctx.fillStyle = glowColor;
     ctx.beginPath();
@@ -609,12 +736,108 @@ const Renderer = (() => {
     }
   }
 
-  function _drawGhost(x, y, isSilhouette = false, myRole = null){
+  function _drawGhost(x, y, isSilhouette = false, myRole = null, dir = {name: 'right'}){
     const r = TILE*0.6;
     const isPower = window.isPowerModeActive;
     
     const innocentSkin = (myRole === 'INNOCENT') ? window.activeInnocentSkin : window.opponentInnocentSkin;
     
+    if (innocentSkin === 'skin_ladybug_glitch' && !isSilhouette) {
+        ctx.save();
+        ctx.translate(x, y);
+
+        // Aura and Pulse
+        const pulse = 0.9 + 0.1 * Math.sin(Date.now() / 150);
+        ctx.scale(pulse, pulse);
+
+        // Body Shape (Ghost shape but red)
+        ctx.fillStyle = '#D32F2F'; // Red ladybug body
+        ctx.shadowColor = '#b026ff';
+        ctx.shadowBlur = 20;
+        
+        ctx.beginPath();
+        ctx.arc(0, -r*0.2, r, Math.PI, 0); // Top dome
+        ctx.lineTo(r, r);
+        ctx.lineTo(r/2, r-4);
+        ctx.lineTo(0, r);
+        ctx.lineTo(-r/2, r-4);
+        ctx.lineTo(-r, r);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0; // reset shadow for spots
+
+        // Dark Spots
+        ctx.fillStyle = '#111111';
+        const spots = [
+            {px: -r*0.5, py: -r*0.1, s: r*0.2},
+            {px: r*0.5, py: 0, s: r*0.25},
+            {px: -r*0.3, py: r*0.4, s: r*0.15},
+            {px: r*0.4, py: r*0.5, s: r*0.2},
+            {px: 0, py: r*0.7, s: r*0.18}
+        ];
+        spots.forEach(sp => {
+            ctx.beginPath(); ctx.arc(sp.px, sp.py, sp.s, 0, Math.PI*2); ctx.fill();
+        });
+
+        // Antennas
+        ctx.strokeStyle = '#111111';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-r*0.3, -r*1.1);
+        ctx.lineTo(-r*0.6, -r*1.6);
+        ctx.moveTo(r*0.3, -r*1.1);
+        ctx.lineTo(r*0.6, -r*1.6);
+        ctx.stroke();
+
+        ctx.fillStyle = '#ff0055';
+        ctx.shadowColor = '#ff0055';
+        ctx.shadowBlur = 15;
+        ctx.beginPath(); ctx.arc(-r*0.6, -r*1.6, r*0.15, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(r*0.6, -r*1.6, r*0.15, 0, Math.PI*2); ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Animated Glowing Eyes
+        const eyeAnim = Math.sin(Date.now() / 100); // Fast pulse
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = '#b026ff';
+        ctx.shadowBlur = 15 + 10 * eyeAnim;
+        
+        // Left eye
+        ctx.fillRect(-r*0.4, -r*0.4, r*0.25, r*0.25);
+        // Right eye
+        ctx.fillRect(r*0.15, -r*0.4, r*0.25, r*0.25);
+
+        // Jagged Glowing Mouth
+        ctx.beginPath();
+        ctx.moveTo(-r*0.5, 0);
+        ctx.lineTo(-r*0.3, -r*0.15);
+        ctx.lineTo(-r*0.1, r*0.1);
+        ctx.lineTo(r*0.1, -r*0.15);
+        ctx.lineTo(r*0.3, r*0.1);
+        ctx.lineTo(r*0.5, -r*0.05);
+        ctx.lineTo(r*0.4, r*0.25);
+        ctx.lineTo(r*0.2, r*0.05);
+        ctx.lineTo(0, r*0.3);
+        ctx.lineTo(-r*0.2, r*0.1);
+        ctx.lineTo(-r*0.4, r*0.2);
+        ctx.closePath();
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = '#b026ff';
+        ctx.shadowBlur = 20;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Glitch Scanlines
+        if(Math.random() < 0.4) {
+            ctx.fillStyle = Math.random() > 0.5 ? 'rgba(0, 255, 255, 0.6)' : 'rgba(255, 0, 255, 0.6)';
+            ctx.fillRect(-r*1.2, (Math.random()-0.5)*r*2, r*2.4, 2 + Math.random()*2);
+        }
+
+        ctx.restore();
+        return;
+    }
+
     let baseColor = '#FF0000'; // Default Innocent Color (Reddish Ghost)
     if (isPower) baseColor = '#FFFF00';
     else {

@@ -253,6 +253,8 @@ const Game = (() => {
     if(navigator.vibrate) navigator.vibrate(200);
     const phaseEl = document.getElementById('phase');
     if(phaseEl) phaseEl.textContent = level + 1;
+    const horrorPhase = document.getElementById('phase-count-horror');
+    if(horrorPhase) horrorPhase.textContent = level + 1;
     uiMessage.textContent = LEVEL_NAMES[level];
     
     if(level === 2) uiSubmsg.textContent = "[ A lanterna falha... ]";
@@ -664,6 +666,12 @@ const Game = (() => {
     uiMessage.style.textShadow = "2px 0 red, -2px 0 blue";
     uiSubmsg.textContent = "";
     document.body.className = '';
+
+    // Recompensas por fase
+    const rewards = [5, 10, 15, 30, 50, 70];
+    if (rewards[level]) {
+        addCoins(rewards[level]);
+    }
     
     setTimeout(() => {
       level++;
@@ -864,6 +872,8 @@ const Game = (() => {
       window.activeInnocentSkin = localStorage.getItem('ag_active_innocent_skin') || null;
       
       document.getElementById('coin-count').textContent = coins;
+      const horrorCoins = document.getElementById('coin-count-horror');
+      if(horrorCoins) horrorCoins.textContent = coins;
   }
 
   function saveEconomy() {
@@ -873,6 +883,8 @@ const Game = (() => {
       localStorage.setItem('ag_active_innocent_skin', window.activeInnocentSkin || "");
       
       document.getElementById('coin-count').textContent = coins;
+      const horrorCoins = document.getElementById('coin-count-horror');
+      if(horrorCoins) horrorCoins.textContent = coins;
   }
 
   function addCoins(amount) {

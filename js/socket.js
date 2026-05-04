@@ -102,6 +102,9 @@ const Net = (() => {
         });
 
         socket.on('gameOver', (data) => {
+            if (data.winner === myRole) {
+                Game.addCoins(20);
+            }
             Game.networkGameOver(data.winner);
         });
 

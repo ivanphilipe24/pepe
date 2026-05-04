@@ -11,8 +11,18 @@
 
     <!-- Main Menu -->
     <div id="menu" class="screen">
-        <!-- Coin Display -->
-        <div id="coin-display" style="position: absolute; top: 20px; right: 20px; font-family: var(--font-title); font-size: 2rem; color: #FFD700; text-shadow: 0 0 10px #FFD700;">
+        <!-- Top UI (Horror Style) -->
+        <div id="top-ui-horror" style="position: absolute; top: 0; left: 0; width: 100%; display: flex; justify-content: space-between; padding: 20px 40px; pointer-events: none; z-index: 100;">
+            <div id="coin-horror-wrap" class="horror-header">
+                <span class="skull-icon">🐞</span>
+                <span id="coin-count-horror">666</span> MOEDAS
+            </div>
+            <div id="phase-horror-wrap" class="horror-header">
+                FASE <span id="phase-count-horror">6</span>
+            </div>
+        </div>
+
+        <div id="coin-display" style="display: none;">
             🪙 <span id="coin-count">0</span>
         </div>
         <div class="menu-content">
@@ -143,6 +153,17 @@
                     </div>
                 </div>
 
+                <!-- Skin Ladybug for Innocent -->
+                <div class="shop-item" data-id="skin_ladybug_glitch" data-price="666" data-type="innocent">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="text-align: left;">
+                            <h3 style="color: #FF5252; margin: 0; font-family: var(--font-title); font-size: 1.8rem;">LADYBUG GLITCH-EATER</h3>
+                            <p style="color: #AA4444; font-size: 0.9rem; margin-top: 5px;">Pintinhas, antenas neon e devoradora de pixels.</p>
+                        </div>
+                        <button class="shop-buy-btn" style="font-size: 1rem; padding: 5px 10px; border-color: #FFD700; color: #FFD700;">🪙 666</button>
+                    </div>
+                </div>
+
                 <!-- Skin 4 -->
                 <div class="shop-item" data-id="skin_void" data-price="60" data-type="killer">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -164,6 +185,17 @@
                         <button class="shop-buy-btn" style="font-size: 1rem; padding: 5px 10px; border-color: #FFD700; color: #FFD700;">🪙 100</button>
                     </div>
                 </div>
+
+                <!-- Skin 6 -->
+                <div class="shop-item" data-id="skin_ladybug_glitch" data-price="666" data-type="killer">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="text-align: left;">
+                            <h3 style="color: #FF5252; margin: 0; font-family: var(--font-title); font-size: 1.8rem;">LADYBUG GLITCH-EATER</h3>
+                            <p style="color: #AA4444; font-size: 0.9rem; margin-top: 5px;">Pintinhas, antenas neon e devoradora de pixels.</p>
+                        </div>
+                        <button class="shop-buy-btn" style="font-size: 1rem; padding: 5px 10px; border-color: #FFD700; color: #FFD700;">🪙 666</button>
+                    </div>
+                </div>
             </div>
 
             <button id="shop-close-btn" style="margin-top: 30px; font-size: 1.2rem; border-color: #444; color: #888;">[ VOLTAR ]</button>
@@ -171,7 +203,7 @@
     </div>
 
     <!-- Interface In-Game / Overlays -->
-    <div id="score-wrap" style="display:none;">
+    <div id="score-wrap" style="display:none; visibility: hidden;">
         FASE: <span id="phase">1</span>/6 | MEMÓRIAS: <span id="dots-left">---</span> | PONTOS: <span id="score">0</span> | SANIDADE: <span id="sanity-ui" style="color: #00FFFF;">100</span>% <span id="mic-icon" style="transition: color 0.2s; filter: grayscale(100%);">🎤</span>
     </div>
 
